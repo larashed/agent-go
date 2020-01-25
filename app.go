@@ -1,13 +1,13 @@
-package agent
+package main
 
 import (
 	"os"
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/larashed/agent-go/agent/commands"
-	socket_server "github.com/larashed/agent-go/agent/server"
 	"github.com/larashed/agent-go/api"
+	"github.com/larashed/agent-go/commands"
+	socket_server "github.com/larashed/agent-go/server"
 )
 
 type App struct {
@@ -20,18 +20,18 @@ const (
 	AppIdFlagName  = "app-id"
 	AppKeyFlagName = "app-key"
 	SocketFlagName = "socket"
+	JsonFlagName   = "json"
 )
 
 var (
 	ApiUrlFlag = &cli.StringFlag{
-		Name:        ApiURLFlagName,
-		Usage:       "Larashed API URL",
-		DefaultText: "https://api.larashed.com/",
+		Name:  ApiURLFlagName,
+		Usage: "Larashed API URL",
+		Value: "https://api.larashed.com/",
 	}
 	AppEnvFlag = &cli.StringFlag{
-		Name:        AppEnvFlagName,
-		Usage:       "Application environment",
-		DefaultText: "https://api.larashed.com/",
+		Name:  AppEnvFlagName,
+		Usage: "Application environment",
 	}
 	AppIdFlag = &cli.StringFlag{
 		Name:  AppIdFlagName,
@@ -43,25 +43,22 @@ var (
 	}
 	SocketFlag = &cli.StringFlag{
 		Name:  SocketFlagName,
-		Usage: "location of the unix socket",
+		Usage: "Location of the unix socket",
+	}
+	JsonFlag = &cli.BoolFlag{
+		Name:  JsonFlagName,
+		Usage: "Output JSON",
 	}
 )
 
 func NewApp() *App {
-	flags := []cli.Flag{
-		ApiUrlFlag,
-		AppEnvFlag,
-		AppIdFlag,
-		AppKeyFlag,
-	}
-
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
 				Name:  "daemon",
 				Usage: "run agent in daemon mode",
 				Action: func(c *cli.Context) error {
-					api := api.NewApi(
+					api := api.NewClient(
 						c.String(ApiURLFlagName),
 						c.String(AppEnvFlagName),
 						c.String(AppIdFlagName),
@@ -70,10 +67,7 @@ func NewApp() *App {
 
 					server := socket_server.NewServer(c.String(SocketFlagName))
 
-					return commands.NewDaemonCommand(
-						api,
-						server,
-					).Run()
+					return commands.NewDaemonCommand(api, server).Run()
 				},
 				Flags: []cli.Flag{
 					ApiUrlFlag,
@@ -84,12 +78,16 @@ func NewApp() *App {
 				},
 			},
 			{
-				Name:  "diagnostics",
-				Usage: "agent diagnostics",
+				Name:  "version",
+				Usage: "agent version",
 				Action: func(c *cli.Context) error {
-					return commands.RunDiagnostics()
+					commands.NewVersionCommand(c.Bool(JsonFlagName))
+
+					return nil
 				},
-				Flags: flags,
+				Flags: []cli.Flag{
+					JsonFlag,
+				},
 			},
 		},
 	}

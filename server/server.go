@@ -10,6 +10,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+type DataHandler func(string)
+
+type DomainSocketServer interface {
+	Start(handler DataHandler) error
+}
+
 type Server struct {
 	address  string
 	listener net.Listener
@@ -19,17 +25,20 @@ func NewServer(address string) *Server {
 	return &Server{address: address}
 }
 
-type DataHandler func(string)
-
 func (s *Server) Start(handler DataHandler) error {
-	ln, err := net.Listen("unix", s.address)
+	err := syscall.Unlink(s.address)
+	if err != nil {
+		// we can ignore this
+	}
+
+	listener, err := net.Listen("unix", s.address)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Listening to %s", s.address)
+	defer listener.Close()
 
-	s.listener = ln
+	s.listener = listener
 
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel,
@@ -42,12 +51,11 @@ func (s *Server) Start(handler DataHandler) error {
 
 	go func(signal chan os.Signal) {
 		<-channel
-		log.Println("received signal")
 		s.Stop()
 	}(channel)
 
 	for {
-		conn, err := ln.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
 			return errors.Wrap(err, "Input error from connection")
 		}
@@ -58,13 +66,15 @@ func (s *Server) Start(handler DataHandler) error {
 
 func (s *Server) handleData(c net.Conn, handler DataHandler) {
 	for {
-		buf := make([]byte, 512)
+		buf := make([]byte, 5000)
 		nr, err := c.Read(buf)
 		if err != nil {
 			return
 		}
 
 		data := buf[0:nr]
+		log.Printf("Received message: %s", data)
+
 		go handler(string(data))
 	}
 }

@@ -1,12 +1,15 @@
 package collectors
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
+
+	"github.com/larashed/agent-go/monitoring/buckets"
 )
 
 type ServerLoad struct {
@@ -15,7 +18,7 @@ type ServerLoad struct {
 	Load15 float64 `json:"15min"`
 }
 
-type ServerMetrics struct {
+type ServerMetric struct {
 	CPU          float64    `json:"cpu"`
 	CPUCoreCount int        `json:"cpu_core_count"`
 	Load         ServerLoad `json:"load"`
@@ -25,15 +28,35 @@ type ServerMetrics struct {
 	DiskFree     uint64     `json:"disk_free"`
 }
 
-type ServerResourceCollector struct {
+func (sm *ServerMetric) String() string {
+	str, _ := json.Marshal(sm)
+
+	return string(str)
 }
 
-func NewServerResourceCollector() *ServerResourceCollector {
-	return &ServerResourceCollector{}
+func (sm *ServerMetric) Value() interface{} {
+	return sm
 }
 
-func (c *ServerResourceCollector) Collect() (ServerMetrics, error) {
-	metrics := ServerMetrics{}
+type ServerMetricCollector struct {
+	bucket *buckets.Bucket
+}
+
+func NewServerMetricCollector(bucket *buckets.Bucket) *ServerMetricCollector {
+	return &ServerMetricCollector{bucket}
+}
+
+func (c *ServerMetricCollector) Collect() {
+	//metrics, err = c.getMetrics()
+	//if err != nil {
+	//	return
+	//}
+	//
+	//return metrics, nil
+}
+
+func (c *ServerMetricCollector) getMetrics() (ServerMetric, error) {
+	metrics := ServerMetric{}
 
 	cp, err := c.CPU()
 	if err == nil {
@@ -65,8 +88,8 @@ func (c *ServerResourceCollector) Collect() (ServerMetrics, error) {
 	return metrics, err
 }
 
-func (c *ServerResourceCollector) CPUCoreCount() (int, error) {
-	count, err := cpu.Counts(true)
+func (c *ServerMetricCollector) CPUCoreCount() (int, error) {
+	count, err := cpu.Counts(false)
 	if err != nil {
 		return 0, err
 	}
@@ -74,7 +97,7 @@ func (c *ServerResourceCollector) CPUCoreCount() (int, error) {
 	return count, nil
 }
 
-func (c *ServerResourceCollector) CPU() (float64, error) {
+func (c *ServerMetricCollector) CPU() (float64, error) {
 	percentages, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		return 0, err
@@ -83,7 +106,7 @@ func (c *ServerResourceCollector) CPU() (float64, error) {
 	return percentages[0], nil
 }
 
-func (c *ServerResourceCollector) Memory() (*mem.VirtualMemoryStat, error) {
+func (c *ServerMetricCollector) Memory() (*mem.VirtualMemoryStat, error) {
 	m, err := mem.VirtualMemory()
 	if err != nil {
 		return nil, err
@@ -92,7 +115,7 @@ func (c *ServerResourceCollector) Memory() (*mem.VirtualMemoryStat, error) {
 	return m, nil
 }
 
-func (c *ServerResourceCollector) Disk() (*disk.UsageStat, error) {
+func (c *ServerMetricCollector) Disk() (*disk.UsageStat, error) {
 	m, err := disk.Usage("/")
 	if err != nil {
 		return nil, err
@@ -101,7 +124,7 @@ func (c *ServerResourceCollector) Disk() (*disk.UsageStat, error) {
 	return m, nil
 }
 
-func (c *ServerResourceCollector) Load() (*ServerLoad, error) {
+func (c *ServerMetricCollector) Load() (*ServerLoad, error) {
 	avg, err := load.Avg()
 	if err != nil {
 		return nil, err

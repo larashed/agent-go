@@ -1,10 +1,10 @@
 language: go
 go:
-  - 1.13
+  - "1.13"
 
 script:
-  - env GOOS=linux GOARCH=amd64 go build -o build/linux/agent_linux_amd64 .
-  - env GOOS=darwin GOARCH=amd64 go build -o build/linux/agent_darvin_amd64 .
+  - ./utils/build_darwin.sh
+  - ./utils/build_linux.sh
 
 deploy:
   provider: releases

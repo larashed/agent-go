@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 )
 
-type Api struct {
+type Api interface {
+	SendServerMetrics(data interface{}) error
+	SendApplicationRecords(data string) error
+	SendDeployment(data interface{}) error
+}
+
+type Client struct {
 	url       string
 	apiKey    string
 	apiSecret string
@@ -21,8 +26,8 @@ type Response struct {
 	Success bool `json:"success"`
 }
 
-func NewApi(url, env, key, secret string) *Api {
-	return &Api{
+func NewClient(url, env, key, secret string) *Client {
+	return &Client{
 		url:       url,
 		env:       env,
 		apiKey:    key,
@@ -33,19 +38,19 @@ func NewApi(url, env, key, secret string) *Api {
 	}
 }
 
-func (c *Api) SendServerMetrics(data interface{}) error {
+func (c *Client) SendServerMetrics(data interface{}) error {
 	return c.doRequest("POST", "agent/server", data)
 }
 
-func (c *Api) SendRecords(data interface{}) error {
+func (c *Client) SendApplicationRecords(data string) error {
 	return c.doRequest("POST", "agent/application", data)
 }
 
-func (c *Api) SendDeployment(data interface{}) error {
+func (c *Client) SendDeployment(data interface{}) error {
 	return c.doRequest("POST", "agent/deployment", data)
 }
 
-func (c *Api) doRequest(method, url string, data interface{}) error {
+func (c *Client) doRequest(method, url string, data interface{}) error {
 	j, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -56,14 +61,14 @@ func (c *Api) doRequest(method, url string, data interface{}) error {
 		return err
 	}
 
-	req.Header.Set("User-Agent", "larashed/agent v1")
+	req.Header.Set("User-Agent", "Larashed/Agent v1.0")
 	req.Header.Set("Larashed-Environment", c.env)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	res, getErr := c.client.Do(req)
-	if getErr != nil {
-		log.Fatal(getErr)
+	res, err := c.client.Do(req)
+	if err != nil {
+		return err
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
