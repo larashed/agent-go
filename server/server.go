@@ -3,8 +3,6 @@ package server
 import (
 	"log"
 	"net"
-	"os"
-	"os/signal"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -14,6 +12,7 @@ type DataHandler func(string)
 
 type DomainSocketServer interface {
 	Start(handler DataHandler) error
+	Stop() error
 }
 
 type Server struct {
@@ -39,20 +38,6 @@ func (s *Server) Start(handler DataHandler) error {
 	defer listener.Close()
 
 	s.listener = listener
-
-	channel := make(chan os.Signal, 1)
-	signal.Notify(channel,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-		syscall.SIGKILL,
-	)
-
-	go func(signal chan os.Signal) {
-		<-channel
-		s.Stop()
-	}(channel)
 
 	for {
 		conn, err := listener.Accept()

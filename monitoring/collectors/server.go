@@ -35,28 +35,45 @@ func (sm *ServerMetric) String() string {
 }
 
 func (sm *ServerMetric) Value() interface{} {
-	return sm
+	return &sm
 }
 
 type ServerMetricCollector struct {
 	bucket *buckets.Bucket
+	stop   chan int
 }
 
 func NewServerMetricCollector(bucket *buckets.Bucket) *ServerMetricCollector {
-	return &ServerMetricCollector{bucket}
+	return &ServerMetricCollector{
+		bucket,
+		make(chan int, 0),
+	}
 }
 
-func (c *ServerMetricCollector) Collect() {
-	//metrics, err = c.getMetrics()
-	//if err != nil {
-	//	return
-	//}
-	//
-	//return metrics, nil
+func (c *ServerMetricCollector) Start() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-c.stop:
+			return
+		case <-ticker.C:
+			metric, err := c.getMetrics()
+			c.bucket.Add(metric)
+			if err != nil {
+				return
+			}
+		}
+	}
 }
 
-func (c *ServerMetricCollector) getMetrics() (ServerMetric, error) {
-	metrics := ServerMetric{}
+func (c *ServerMetricCollector) Stop() {
+	c.stop <- 1
+}
+
+func (c *ServerMetricCollector) getMetrics() (*ServerMetric, error) {
+	metrics := &ServerMetric{}
 
 	cp, err := c.CPU()
 	if err == nil {

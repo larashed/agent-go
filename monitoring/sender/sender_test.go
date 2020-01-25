@@ -66,7 +66,7 @@ func TestSender_SendApplicationMetrics(t *testing.T) {
 		1*time.Nanosecond,
 	)
 
-	sender.SendApplicationMetrics()
+	sender.SendAppMetrics()
 
 	var expectedNumbers []int
 

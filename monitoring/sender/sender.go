@@ -19,7 +19,9 @@ type Sender struct {
 
 	sentAt time.Time
 	mutex  sync.RWMutex
-	stop   chan int
+
+	stopServerMetricSend chan int
+	stopAppMetricSend    chan int
 }
 
 func NewSender(
@@ -35,31 +37,20 @@ func NewSender(
 		time.Now(),
 		sync.RWMutex{},
 		make(chan int, 0),
+		make(chan int, 0),
 	}
 }
 
-func (s *Sender) Start() {
-	// sends server metrics in a go routine indefinitely
-	s.sendServerMetrics()
-
-	// send server metrics via 2 go routines indefinitely
-	s.sendApplicationMetrics()
+func (s *Sender) StopSendingServerMetrics() {
+	s.stopServerMetricSend <- 1
 }
 
-func (s *Sender) Stop() {
-	s.stop <- 1
-	s.stop <- 1
+func (s *Sender) StopSendingAppMetrics() {
+	s.stopAppMetricSend <- 1
+	s.stopAppMetricSend <- 1
 }
 
-func (s *Sender) sendServerMetrics() {
-	go func() {
-		// collects server metrics every n seconds
-		// aggregates collected metrics and sends as one record
-		// @TODO implement
-	}()
-}
-
-func (s *Sender) sendApplicationMetrics() {
+func (s *Sender) SendServerMetrics() {
 	go func() {
 		for {
 			select {
@@ -67,7 +58,25 @@ func (s *Sender) sendApplicationMetrics() {
 				if s.appMetricBucket.Count() >= s.config.appBucketLimit {
 					s.sendAppMetrics()
 				}
-			case <-s.stop:
+			case <-s.stopServerMetricSend:
+				return
+			}
+		}
+		// collects server metrics every n seconds
+		// aggregates collected metrics and sends as one record
+		// @TODO implement
+	}()
+}
+
+func (s *Sender) SendAppMetrics() {
+	go func() {
+		for {
+			select {
+			case <-s.appMetricBucket.Channel:
+				if s.appMetricBucket.Count() >= s.config.appBucketLimit {
+					s.sendAppMetrics()
+				}
+			case <-s.stopAppMetricSend:
 				return
 			}
 		}
@@ -75,9 +84,11 @@ func (s *Sender) sendApplicationMetrics() {
 
 	go func() {
 		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+
 		for {
 			select {
-			case <-s.stop:
+			case <-s.stopAppMetricSend:
 				ticker.Stop()
 				return
 			case t := <-ticker.C:

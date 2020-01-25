@@ -33,8 +33,12 @@ func NewAppMetricCollector(socketServer server.DomainSocketServer, bucket *bucke
 	}
 }
 
-func (amc *AppMetricCollector) Collect() error {
+func (amc *AppMetricCollector) Start() error {
 	return amc.socketServer.Start(func(record string) {
 		amc.bucket.Add(NewAppMetric(record))
 	})
+}
+
+func (amc *AppMetricCollector) Stop() error {
+	return amc.socketServer.Stop()
 }

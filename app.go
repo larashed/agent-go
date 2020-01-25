@@ -67,7 +67,8 @@ func NewApp() *App {
 
 					server := socket_server.NewServer(c.String(SocketFlagName))
 
-					return commands.NewDaemonCommand(api, server).Run()
+					commands.NewDaemonCommand(api, server).Run()
+					return nil
 				},
 				Flags: []cli.Flag{
 					ApiUrlFlag,
