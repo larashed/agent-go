@@ -58,17 +58,15 @@ func NewApp() *App {
 				Name:  "daemon",
 				Usage: "run agent in daemon mode",
 				Action: func(c *cli.Context) error {
-					api := api.NewClient(
+					apiClient := api.NewClient(
 						c.String(ApiURLFlagName),
 						c.String(AppEnvFlagName),
 						c.String(AppIdFlagName),
 						c.String(AppKeyFlagName),
 					)
-
 					server := socket_server.NewServer(c.String(SocketFlagName))
 
-					commands.NewDaemonCommand(api, server).Run()
-					return nil
+					return commands.NewDaemonCommand(apiClient, server).Run()
 				},
 				Flags: []cli.Flag{
 					ApiUrlFlag,
