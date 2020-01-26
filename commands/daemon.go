@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/larashed/agent-go/api"
@@ -11,24 +12,35 @@ import (
 	"github.com/larashed/agent-go/monitoring/collectors"
 	"github.com/larashed/agent-go/monitoring/sender"
 	socketserver "github.com/larashed/agent-go/server"
+	"github.com/pkg/errors"
 )
 
 type Daemon struct {
 	api          api.Api
 	socketServer socketserver.DomainSocketServer
+
+	stopCollectorApp    chan struct{}
+	stopCollectorServer chan struct{}
+	stopSenderApp       chan struct{}
+	stopSenderServer    chan struct{}
+	errorChan           chan error
 }
 
-func NewDaemonCommand(api api.Api, socketServer socketserver.DomainSocketServer) *Daemon {
+func NewDaemonCommand(apiClient api.Api, socketServer socketserver.DomainSocketServer) *Daemon {
 	return &Daemon{
-		api:          api,
+		api:          apiClient,
 		socketServer: socketServer,
+
+		stopCollectorApp:    make(chan struct{}),
+		stopCollectorServer: make(chan struct{}),
+		stopSenderApp:       make(chan struct{}),
+		stopSenderServer:    make(chan struct{}),
+		errorChan:           make(chan error),
 	}
 }
 
-func (d *Daemon) Run() {
-	log.Print("Starting daemon..")
-	log.Printf("PID: %d", os.Getpid())
-	log.Printf("Starting2...")
+func (d *Daemon) Run() error {
+	log.Println("Starting daemon..")
 
 	config := sender.NewConfig(200, 5, 15*time.Second, time.Minute)
 
@@ -40,73 +52,84 @@ func (d *Daemon) Run() {
 
 	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, config)
 
-	//closeChan := make(chan struct{})
+	go d.runAppMetricCollector(appMetricCollector)
+	go d.runAppMetricSender(metricSender)
+
+	go d.runServerMetricCollector(serverMetricCollector)
+	go d.runServerMetricSender(metricSender)
+
+	log.Printf("Daemon running with PID %d\n", os.Getpid())
+
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-
-	errorChan := make(chan error, 1)
-
-	go d.runAppMetricCollector(appMetricCollector, errorChan, sigChan)
-	go d.runAppMetricSender(metricSender, errorChan, sigChan)
-
-	go d.runServerMetricCollector(serverMetricCollector, errorChan, sigChan)
-	go d.runServerMetricSender(metricSender, errorChan, sigChan)
-
-	err := <-errorChan
-	log.Printf("Agent exited with %s", err)
-	sigChan <- os.Kill
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	select {
+	case err := <-d.errorChan:
+		return errors.Wrap(err, "daemon exited")
+	case sig := <-sigChan:
+		log.Printf("Daemon received %s signal", sig.String())
+		d.Shutdown()
+		return nil
+	}
 }
 
-func (d *Daemon) runAppMetricCollector(appMetricCollector *collectors.AppMetricCollector, errorChan chan error, sigChan chan os.Signal) {
+func (d *Daemon) Shutdown() {
+	log.Printf("Stopping daemon..")
+
+	d.stopSenderServer <- struct{}{}
+	d.stopSenderApp <- struct{}{}
+	d.stopCollectorServer <- struct{}{}
+	d.stopCollectorApp <- struct{}{}
+
+	// TODO Could wait for stop events to be performed gracefully
+	time.Sleep(time.Millisecond)
+	log.Printf("Daemon stopped")
+}
+
+func (d *Daemon) runAppMetricCollector(appMetricCollector *collectors.AppMetricCollector) {
 	go func() {
-		<-sigChan
+		<-d.stopCollectorApp
 		err := appMetricCollector.Stop()
 		if err != nil {
 			log.Printf("Error stopping app collector: %s", err)
-			//errorChan <- err
 		}
 
 		log.Println("Stopped app metric collector")
 	}()
 
-	errorChan <- appMetricCollector.Start()
+	if err := appMetricCollector.Start(); err != socketserver.ErrServerStopped {
+		d.errorChan <- err
+	}
 }
 
-func (d *Daemon) runServerMetricCollector(serverMetricCollector *collectors.ServerMetricCollector, errorChan chan error, sigChan chan os.Signal) {
+func (d *Daemon) runServerMetricCollector(serverMetricCollector *collectors.ServerMetricCollector) {
 	go func() {
-		<-sigChan
+		<-d.stopCollectorServer
 		serverMetricCollector.Stop()
 
 		log.Println("Stopped server metric collector")
 	}()
 
 	serverMetricCollector.Start()
-
-	errorChan <- nil
 }
 
-func (d *Daemon) runServerMetricSender(sender *sender.Sender, errorChan chan error, sigChan chan os.Signal) {
+func (d *Daemon) runServerMetricSender(sender *sender.Sender) {
 	go func() {
-		<-sigChan
+		<-d.stopSenderServer
 		sender.StopSendingServerMetrics()
 
 		log.Println("Stopped server metric sender")
 	}()
 
 	sender.SendServerMetrics()
-
-	errorChan <- nil
 }
 
-func (d *Daemon) runAppMetricSender(sender *sender.Sender, errorChan chan error, sigChan chan os.Signal) {
+func (d *Daemon) runAppMetricSender(sender *sender.Sender) {
 	go func() {
-		<-sigChan
+		<-d.stopSenderApp
 		sender.StopSendingAppMetrics()
 
 		log.Println("Stopped app metric sender")
 	}()
 
 	sender.SendAppMetrics()
-
-	errorChan <- nil
 }
