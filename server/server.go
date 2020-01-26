@@ -16,33 +16,44 @@ type DomainSocketServer interface {
 }
 
 type Server struct {
-	address  string
-	listener net.Listener
+	address      string
+	listener     net.Listener
+	listenerStop chan struct{}
 }
 
 func NewServer(address string) *Server {
-	return &Server{address: address}
+	return &Server{
+		address:      address,
+		listenerStop: make(chan struct{}),
+	}
 }
 
-func (s *Server) Start(handler DataHandler) error {
-	err := syscall.Unlink(s.address)
+// ErrServerStopped is returned by the Server's Start() method after a call to Stop().
+var ErrServerStopped = errors.New("server stopped")
+
+// Start listens on the TCP network address in server.address and then
+// calls given DataHandler to handle requests on incoming connections.
+//
+// Start always returns a non-nil error. After Stop(), the returned error is ErrServerStopped.
+func (s *Server) Start(handler DataHandler) (err error) {
+	// we can ignore this
+_:
+	syscall.Unlink(s.address)
+
+	s.listener, err = net.Listen("unix", s.address)
 	if err != nil {
-		// we can ignore this
+		return errors.Wrapf(err, `socket "%s" opening failed`, s.address)
 	}
-
-	listener, err := net.Listen("unix", s.address)
-	if err != nil {
-		return err
-	}
-
-	defer listener.Close()
-
-	s.listener = listener
 
 	for {
-		conn, err := listener.Accept()
+		conn, err := s.listener.Accept()
 		if err != nil {
-			return errors.Wrap(err, "Input error from connection")
+			select {
+			case <-s.listenerStop:
+				return ErrServerStopped
+			default:
+				return errors.Wrap(err, "Input error from connection")
+			}
 		}
 
 		go s.handleData(conn, handler)
@@ -65,10 +76,6 @@ func (s *Server) handleData(c net.Conn, handler DataHandler) {
 }
 
 func (s *Server) Stop() error {
-	err := s.listener.Close()
-	if err != nil {
-		return errors.Wrapf(err, "Failed to close listener to socket %v", s.address)
-	}
-
-	return nil
+	close(s.listenerStop)
+	return s.listener.Close()
 }
