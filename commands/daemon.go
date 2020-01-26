@@ -3,6 +3,8 @@ package commands
 import (
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/larashed/agent-go/api"
@@ -57,18 +59,30 @@ func (d *Daemon) Run() error {
 	go d.runServerMetricSender(metricSender)
 
 	log.Printf("Daemon running with PID %d\n", os.Getpid())
-	err := <-d.errorChan
-	if err != nil {
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	select {
+	case err := <-d.errorChan:
 		return errors.Wrap(err, "daemon exited")
+	case sig := <-sigChan:
+		log.Printf("Daemon received %s signal", sig.String())
+		d.Shutdown()
+		return nil
 	}
-	return nil
 }
 
 func (d *Daemon) Shutdown() {
+	log.Printf("Stopping daemon..")
+
 	d.stopSenderServer <- struct{}{}
 	d.stopSenderApp <- struct{}{}
 	d.stopCollectorServer <- struct{}{}
 	d.stopCollectorApp <- struct{}{}
+
+	// TODO Could wait for stop events to be performed gracefully
+	time.Sleep(time.Millisecond)
+	log.Printf("Daemon stopped")
 }
 
 func (d *Daemon) runAppMetricCollector(appMetricCollector *collectors.AppMetricCollector) {
