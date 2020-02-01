@@ -6,7 +6,7 @@ import (
 
 func AggregateServerMetrics(metrics []*ServerMetric) *ServerMetric {
 	var mem = 0.0
-	var disk = 0
+	var disk = 0.0
 	var cpu = 0.0
 	var load1 = 0.0
 	var load5 = 0.0
@@ -15,8 +15,8 @@ func AggregateServerMetrics(metrics []*ServerMetric) *ServerMetric {
 	length := len(metrics)
 	lastMetric := metrics[length-1]
 
-	for i := 0; i < len(metrics); i++ {
-		disk += int(metrics[i].DiskUsedPercentage)
+	for i := 0; i < length; i++ {
+		disk += metrics[i].DiskUsedPercentage
 		mem += metrics[i].MemoryUserPercentage
 		cpu += metrics[i].CPUUsedPercentage
 		load1 += metrics[i].Load.Load1
@@ -29,12 +29,13 @@ func AggregateServerMetrics(metrics []*ServerMetric) *ServerMetric {
 	metric.CPUCoreCount = lastMetric.CPUCoreCount
 	metric.CreatedAt = lastMetric.CreatedAt
 	metric.Hostname = lastMetric.Hostname
+	metric.Services = lastMetric.Services
 
 	metric.MemoryTotal = lastMetric.MemoryTotal
 	metric.MemoryUserPercentage = round(mem / float64(length))
 
 	metric.DiskTotal = lastMetric.DiskTotal
-	metric.DiskUsedPercentage = round(float64(disk / length))
+	metric.DiskUsedPercentage = round(disk / float64(length))
 
 	metric.Load.Load1 = round(load1 / float64(length))
 	metric.Load.Load5 = round(load5 / float64(length))

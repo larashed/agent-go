@@ -2,6 +2,9 @@ package collectors
 
 import (
 	"os"
+	"os/exec"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -27,60 +30,65 @@ func NewServerMetricCollector(bucket *buckets.ServerMetricBucket, intervalInSeco
 	}
 }
 
-func (c *ServerMetricCollector) Start() {
-	ticker := time.NewTicker(time.Duration(c.intervalInSeconds) * time.Second)
+func (smc *ServerMetricCollector) Start() {
+	ticker := time.NewTicker(time.Duration(smc.intervalInSeconds) * time.Second)
 	defer ticker.Stop()
 
 	// lets measure at start
-	metric, _ := c.buildServerMetrics()
-	c.bucket.Add(metric)
+	metric, _ := smc.buildServerMetrics()
+	smc.bucket.Add(metric)
 
 	for {
 		select {
-		case <-c.stop:
+		case <-smc.stop:
 			return
 		case <-ticker.C:
-			metric, err := c.buildServerMetrics()
+			metric, err := smc.buildServerMetrics()
 			if err != nil {
 				continue
 			}
-			c.bucket.Add(metric)
+			smc.bucket.Add(metric)
 		}
 	}
 }
 
-func (c *ServerMetricCollector) Stop() {
-	c.stop <- 1
+func (smc *ServerMetricCollector) Stop() {
+	smc.stop <- 1
 }
 
-func (c *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, error) {
+func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, error) {
 	metric := &metrics.ServerMetric{}
 
-	cp, err := c.CPU()
+	cp, err := smc.CPU()
 	if err == nil {
 		metric.CPUUsedPercentage = cp
 	}
 
-	cc, err := c.CPUCoreCount()
+	cc, err := smc.CPUCoreCount()
 	if err == nil {
 		metric.CPUCoreCount = cc
 	}
 
-	m, err := c.Memory()
+	m, err := smc.Memory()
 	if err == nil {
 		metric.MemoryTotal = m.Total
 		metric.MemoryUserPercentage = m.UsedPercent
 	}
 
-	l, err := c.Load()
+	l, err := smc.Load()
 	if err == nil {
 		metric.Load = *l
 	}
 
-	d, err := c.Disk()
+	d, err := smc.Disk()
 	if err == nil {
 		metric.DiskTotal = d.Total
 		metric.DiskUsedPercentage = d.UsedPercent
+	}
+
+	s, err := smc.Services()
+	if err == nil {
+		metric.Services = s
 	}
 
 	metric.CreatedAt = time.Now()
@@ -93,7 +101,7 @@ func (c *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, err
 	return metric, err
 }
 
-func (c *ServerMetricCollector) CPUCoreCount() (int, error) {
+func (smc *ServerMetricCollector) CPUCoreCount() (int, error) {
 	count, err := cpu.Counts(false)
 	if err != nil {
 		return 0, err
@@ -102,7 +110,7 @@ func (c *ServerMetricCollector) CPUCoreCount() (int, error) {
 	return count, nil
 }
 
-func (c *ServerMetricCollector) CPU() (float64, error) {
+func (smc *ServerMetricCollector) CPU() (float64, error) {
 	percentages, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		return 0, err
@@ -111,7 +119,7 @@ func (c *ServerMetricCollector) CPU() (float64, error) {
 	return percentages[0], nil
 }
 
-func (c *ServerMetricCollector) Memory() (*mem.VirtualMemoryStat, error) {
+func (smc *ServerMetricCollector) Memory() (*mem.VirtualMemoryStat, error) {
 	m, err := mem.VirtualMemory()
 	if err != nil {
 		return nil, err
@@ -120,7 +128,7 @@ func (c *ServerMetricCollector) Memory() (*mem.VirtualMemoryStat, error) {
 	return m, nil
 }
 
-func (c *ServerMetricCollector) Disk() (*disk.UsageStat, error) {
+func (smc *ServerMetricCollector) Disk() (*disk.UsageStat, error) {
 	m, err := disk.Usage("/")
 	if err != nil {
 		return nil, err
@@ -129,7 +137,7 @@ func (c *ServerMetricCollector) Disk() (*disk.UsageStat, error) {
 	return m, nil
 }
 
-func (c *ServerMetricCollector) Load() (*metrics.ServerLoad, error) {
+func (smc *ServerMetricCollector) Load() (*metrics.ServerLoad, error) {
 	avg, err := load.Avg()
 	if err != nil {
 		return nil, err
@@ -141,3 +149,85 @@ func (c *ServerMetricCollector) Load() (*metrics.ServerLoad, error) {
 		Load15: avg.Load15,
 	}, nil
 }
+
+func (smc *ServerMetricCollector) Services() (services []metrics.Service, err error) {
+	cmd := exec.Command("service", "--status-all")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	return parseServiceList(string(output)), nil
+}
+
+func parseServiceList(output string) (services []metrics.Service) {
+	list := strings.Split(string(output), "\n")
+	for i := 0; i < len(list); i++ {
+		r, err := regexp.Compile(`\[\s(.)\s\](.*)`)
+		if err != nil {
+			continue
+		}
+		matched := r.FindStringSubmatch(list[i])
+		if len(matched) == 0 {
+			continue
+		}
+		service := metrics.Service{}
+		parsedStatus := strings.TrimSpace(matched[1])
+		switch parsedStatus {
+		case "+":
+			service.Status = metrics.ServiceStatusRunning
+			break
+		case "-":
+			service.Status = metrics.ServiceStatusStopped
+			break
+		case "?":
+			service.Status = metrics.ServiceStatusUnknown
+			break
+		default:
+			continue
+		}
+
+		service.Name = strings.TrimSpace(matched[2])
+
+		services = append(services, service)
+	}
+	return services
+}
+
+/**
+
+
+  protected function parseLine($line)
+  {
+      if (preg_match('/\[\s(.)\s\](.*)/', $line, $matches)) {
+          return [
+              'status' => $this->parseServiceStatus($matches[1]),
+              'name'   => $this->parseServiceName($matches[2]),
+          ];
+      }
+
+      return null;
+  }
+
+  protected function parseServiceStatus($status)
+  {
+      if ($status === '-') {
+          return self::STATUS_STOPPED;
+      }
+
+      if ($status === '+') {
+          return self::STATUS_RUNNING;
+      }
+
+      if ($status === '?') {
+          return self::STATUS_UNDETERMINED;
+      }
+
+      return self::STATUS_UNKNOWN;
+  }
+
+  protected function parseServiceName($name)
+  {
+      return trim(strtolower($name));
+  }
+*/

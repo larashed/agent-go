@@ -5,6 +5,15 @@ import (
 	"time"
 )
 
+const ServiceStatusStopped = 0
+const ServiceStatusRunning = 1
+const ServiceStatusUnknown = 2
+
+type Service struct {
+	Status int    `json:"status"`
+	Name   string `json:"name"`
+}
+
 type ServerLoad struct {
 	Load1  float64 `json:"load1"`
 	Load5  float64 `json:"load5"`
@@ -21,6 +30,7 @@ type ServerMetric struct {
 	DiskTotal            uint64     `json:"disk_total"`
 	DiskUsedPercentage   float64    `json:"disk_used_percentage"`
 	CreatedAt            time.Time  `json:"-"`
+	Services             []Service  `json:"services"`
 	CreatedAtFormatted   string     `json:"created_at"`
 }
 
