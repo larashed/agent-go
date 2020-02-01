@@ -3,15 +3,17 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
 type Api interface {
-	SendServerMetrics(data interface{}) error
-	SendApplicationRecords(data string) error
-	SendDeployment(data interface{}) error
+	SendServerMetrics(data string) (*Response, error)
+	SendEnvironmentMetrics(data string) (*Response, error)
+	//SendDeployment(data string) (*Response, error)
 }
 
 type Client struct {
@@ -23,7 +25,8 @@ type Client struct {
 }
 
 type Response struct {
-	Success bool `json:"success"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 func NewClient(url, env, key, secret string) *Client {
@@ -33,54 +36,54 @@ func NewClient(url, env, key, secret string) *Client {
 		apiKey:    key,
 		apiSecret: secret,
 		client: http.Client{
-			Timeout: time.Second * 5, // Maximum of 2 secs
+			Timeout: time.Second * 10, // Maximum of 2 secs
 		},
 	}
 }
 
-func (c *Client) SendServerMetrics(data interface{}) error {
-	return c.doRequest("POST", "agent/server", data)
+func (c *Client) SendServerMetrics(data string) (*Response, error) {
+	return c.doRequest("POST", "agent/server/metrics", data)
 }
 
-func (c *Client) SendApplicationRecords(data string) error {
-	return c.doRequest("POST", "agent/application", data)
+func (c *Client) SendEnvironmentMetrics(data string) (*Response, error) {
+	return c.doRequest("POST", "agent/environment/metrics", data)
 }
 
-func (c *Client) SendDeployment(data interface{}) error {
-	return c.doRequest("POST", "agent/deployment", data)
-}
-
-func (c *Client) doRequest(method, url string, data interface{}) error {
-	j, err := json.Marshal(data)
+func (c *Client) doRequest(method, url string, data string) (*Response, error) {
+	req, err := http.NewRequest(
+		method,
+		strings.TrimRight(c.url, "/")+"/v1/"+url,
+		bytes.NewBuffer([]byte(data)),
+	)
 	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest(method, c.url+"/v1/"+url, bytes.NewBuffer(j))
-	if err != nil {
-		return err
+		return nil, err
 	}
 
 	req.Header.Set("User-Agent", "Larashed/Agent v1.0")
 	req.Header.Set("Larashed-Environment", c.env)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	req.SetBasicAuth(c.apiKey, c.apiSecret)
 
 	res, err := c.client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	response := &Response{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	if !response.Success {
+		return nil, errors.New(response.Message)
+	}
+
+	return response, nil
 }

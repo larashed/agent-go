@@ -1,7 +1,7 @@
 package collectors
 
 import (
-	"encoding/json"
+	"os"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -10,60 +10,41 @@ import (
 	"github.com/shirou/gopsutil/mem"
 
 	"github.com/larashed/agent-go/monitoring/buckets"
+	"github.com/larashed/agent-go/monitoring/metrics"
 )
 
-type ServerLoad struct {
-	Load1  float64 `json:"1min"`
-	Load5  float64 `json:"5min"`
-	Load15 float64 `json:"15min"`
-}
-
-type ServerMetric struct {
-	CPU          float64    `json:"cpu"`
-	CPUCoreCount int        `json:"cpu_core_count"`
-	Load         ServerLoad `json:"load"`
-	MemoryTotal  uint64     `json:"memory_total"`
-	MemoryFree   float64    `json:"memory_free"`
-	DiskTotal    uint64     `json:"disk_total"`
-	DiskFree     uint64     `json:"disk_free"`
-}
-
-func (sm *ServerMetric) String() string {
-	str, _ := json.Marshal(sm)
-
-	return string(str)
-}
-
-func (sm *ServerMetric) Value() interface{} {
-	return &sm
-}
-
 type ServerMetricCollector struct {
-	bucket *buckets.Bucket
-	stop   chan int
+	bucket            *buckets.ServerMetricBucket
+	intervalInSeconds int
+	stop              chan int
 }
 
-func NewServerMetricCollector(bucket *buckets.Bucket) *ServerMetricCollector {
+func NewServerMetricCollector(bucket *buckets.ServerMetricBucket, intervalInSeconds int) *ServerMetricCollector {
 	return &ServerMetricCollector{
 		bucket,
+		intervalInSeconds,
 		make(chan int, 0),
 	}
 }
 
 func (c *ServerMetricCollector) Start() {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(time.Duration(c.intervalInSeconds) * time.Second)
 	defer ticker.Stop()
+
+	// lets measure at start
+	metric, _ := c.buildServerMetrics()
+	c.bucket.Add(metric)
 
 	for {
 		select {
 		case <-c.stop:
 			return
 		case <-ticker.C:
-			metric, err := c.getMetrics()
-			c.bucket.Add(metric)
+			metric, err := c.buildServerMetrics()
 			if err != nil {
-				return
+				continue
 			}
+			c.bucket.Add(metric)
 		}
 	}
 }
@@ -72,37 +53,44 @@ func (c *ServerMetricCollector) Stop() {
 	c.stop <- 1
 }
 
-func (c *ServerMetricCollector) getMetrics() (*ServerMetric, error) {
-	metrics := &ServerMetric{}
+func (c *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, error) {
+	metric := &metrics.ServerMetric{}
 
 	cp, err := c.CPU()
 	if err == nil {
-		metrics.CPU = cp
+		metric.CPUUsedPercentage = cp
 	}
 
 	cc, err := c.CPUCoreCount()
 	if err == nil {
-		metrics.CPUCoreCount = cc
+		metric.CPUCoreCount = cc
 	}
 
 	m, err := c.Memory()
 	if err == nil {
-		metrics.MemoryTotal = m.Total
-		metrics.MemoryFree = m.UsedPercent
+		metric.MemoryTotal = m.Total
+		metric.MemoryUserPercentage = m.UsedPercent
 	}
 
 	l, err := c.Load()
 	if err == nil {
-		metrics.Load = *l
+		metric.Load = *l
 	}
 
 	d, err := c.Disk()
 	if err == nil {
-		metrics.DiskTotal = d.Total
-		metrics.DiskFree = d.Free
+		metric.DiskTotal = d.Total
+		metric.DiskUsedPercentage = d.UsedPercent
 	}
 
-	return metrics, err
+	metric.CreatedAt = time.Now()
+
+	hostname, err := os.Hostname()
+	if err == nil {
+		metric.Hostname = hostname
+	}
+
+	return metric, err
 }
 
 func (c *ServerMetricCollector) CPUCoreCount() (int, error) {
@@ -141,13 +129,13 @@ func (c *ServerMetricCollector) Disk() (*disk.UsageStat, error) {
 	return m, nil
 }
 
-func (c *ServerMetricCollector) Load() (*ServerLoad, error) {
+func (c *ServerMetricCollector) Load() (*metrics.ServerLoad, error) {
 	avg, err := load.Avg()
 	if err != nil {
 		return nil, err
 	}
 
-	return &ServerLoad{
+	return &metrics.ServerLoad{
 		Load1:  avg.Load1,
 		Load5:  avg.Load5,
 		Load15: avg.Load15,

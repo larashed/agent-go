@@ -1,7 +1,6 @@
 package server
 
 import (
-	"log"
 	"net"
 	"syscall"
 
@@ -69,8 +68,6 @@ func (s *Server) handleData(c net.Conn, handler DataHandler) {
 		}
 
 		data := buf[0:nr]
-		log.Printf("Received message: %s", data)
-
 		go handler(string(data))
 	}
 }

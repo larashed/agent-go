@@ -7,12 +7,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/larashed/agent-go/api"
+	"github.com/larashed/agent-go/monitoring"
 	"github.com/larashed/agent-go/monitoring/buckets"
 	"github.com/larashed/agent-go/monitoring/collectors"
 	"github.com/larashed/agent-go/monitoring/sender"
 	socketserver "github.com/larashed/agent-go/server"
-	"github.com/pkg/errors"
 )
 
 type Daemon struct {
@@ -42,13 +44,13 @@ func NewDaemonCommand(apiClient api.Api, socketServer socketserver.DomainSocketS
 func (d *Daemon) Run() error {
 	log.Println("Starting daemon..")
 
-	config := sender.NewConfig(200, 5, 15*time.Second, time.Minute)
+	config := monitoring.NewConfig(200, 5, 10)
 
-	appMetricBucket := buckets.NewBucket()
-	serverMetricBucket := buckets.NewBucket()
+	appMetricBucket := buckets.NewAppMetricBucket()
+	serverMetricBucket := buckets.NewServerMetricBucket()
 
 	appMetricCollector := collectors.NewAppMetricCollector(d.socketServer, appMetricBucket)
-	serverMetricCollector := collectors.NewServerMetricCollector(serverMetricBucket)
+	serverMetricCollector := collectors.NewServerMetricCollector(serverMetricBucket, config.ServerMetricCollectionInterval)
 
 	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, config)
 

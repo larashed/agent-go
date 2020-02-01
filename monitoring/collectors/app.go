@@ -2,31 +2,16 @@ package collectors
 
 import (
 	"github.com/larashed/agent-go/monitoring/buckets"
+	"github.com/larashed/agent-go/monitoring/metrics"
 	"github.com/larashed/agent-go/server"
 )
 
-type AppMetric struct {
-	record string
-}
-
-func NewAppMetric(record string) *AppMetric {
-	return &AppMetric{record}
-}
-
-func (am *AppMetric) String() string {
-	return am.record
-}
-
-func (am *AppMetric) Value() interface{} {
-	return am.record
-}
-
 type AppMetricCollector struct {
 	socketServer server.DomainSocketServer
-	bucket       *buckets.Bucket
+	bucket       *buckets.AppMetricBucket
 }
 
-func NewAppMetricCollector(socketServer server.DomainSocketServer, bucket *buckets.Bucket) *AppMetricCollector {
+func NewAppMetricCollector(socketServer server.DomainSocketServer, bucket *buckets.AppMetricBucket) *AppMetricCollector {
 	return &AppMetricCollector{
 		socketServer: socketServer,
 		bucket:       bucket,
@@ -35,7 +20,7 @@ func NewAppMetricCollector(socketServer server.DomainSocketServer, bucket *bucke
 
 func (amc *AppMetricCollector) Start() error {
 	return amc.socketServer.Start(func(record string) {
-		amc.bucket.Add(NewAppMetric(record))
+		amc.bucket.Add(metrics.NewAppMetric(record))
 	})
 }
 

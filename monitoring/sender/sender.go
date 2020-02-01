@@ -6,16 +6,18 @@ import (
 	"time"
 
 	"github.com/larashed/agent-go/api"
+	"github.com/larashed/agent-go/monitoring"
 	"github.com/larashed/agent-go/monitoring/buckets"
+	metrics "github.com/larashed/agent-go/monitoring/metrics"
 )
 
 type Sender struct {
 	api api.Api
 
-	appMetricBucket    *buckets.Bucket
-	serverMetricBucket *buckets.Bucket
+	appMetricBucket    *buckets.AppMetricBucket
+	serverMetricBucket *buckets.ServerMetricBucket
 
-	config *Config
+	config *monitoring.Config
 
 	sentAt time.Time
 	mutex  sync.RWMutex
@@ -26,9 +28,9 @@ type Sender struct {
 
 func NewSender(
 	api api.Api,
-	appMetricBucket *buckets.Bucket,
-	serverMetricBucket *buckets.Bucket,
-	config *Config) *Sender {
+	appMetricBucket *buckets.AppMetricBucket,
+	serverMetricBucket *buckets.ServerMetricBucket,
+	config *monitoring.Config) *Sender {
 	return &Sender{
 		api,
 		appMetricBucket,
@@ -54,17 +56,12 @@ func (s *Sender) SendServerMetrics() {
 	go func() {
 		for {
 			select {
-			case <-s.appMetricBucket.Channel:
-				if s.appMetricBucket.Count() >= s.config.appBucketLimit {
-					s.sendAppMetrics()
-				}
+			case <-s.serverMetricBucket.Channel:
+				go s.aggregateAndSendServerMetrics()
 			case <-s.stopServerMetricSend:
 				return
 			}
 		}
-		// collects server metrics every n seconds
-		// aggregates collected metrics and sends as one record
-		// @TODO implement
 	}()
 }
 
@@ -73,8 +70,8 @@ func (s *Sender) SendAppMetrics() {
 		for {
 			select {
 			case <-s.appMetricBucket.Channel:
-				if s.appMetricBucket.Count() >= s.config.appBucketLimit {
-					s.sendAppMetrics()
+				if s.appMetricBucket.Count() >= s.config.AppBucketLimit {
+					go s.sendAppMetrics()
 				}
 			case <-s.stopAppMetricSend:
 				return
@@ -92,10 +89,10 @@ func (s *Sender) SendAppMetrics() {
 				ticker.Stop()
 				return
 			case t := <-ticker.C:
-				// send data if the bucket is not empty and there hasn't been a send in 5 seconds
-				if t.Sub(s.sentAt).Seconds() > 5 {
+				// send data if the bucket is not empty and there hasn't been a send in n seconds
+				if t.Sub(s.sentAt).Seconds() > float64(s.config.AppBucketNotFillingSeconds) {
 					if s.appMetricBucket.Count() > 0 {
-						s.sendAppMetrics()
+						go s.sendAppMetrics()
 					}
 				}
 			}
@@ -110,13 +107,43 @@ func (s *Sender) updateSentAt() {
 	s.sentAt = time.Now()
 }
 
-func (s *Sender) sendAppMetrics() {
-	bucket := s.appMetricBucket.PullAndRemove(s.config.appBucketLimit)
+func (s *Sender) aggregateAndSendServerMetrics() {
+	minutes := s.serverMetricBucket.Minutes()
 
-	err := s.api.SendApplicationRecords(bucket.String())
+	// don't send if the bucket contains only one (the current) minute
+	if len(minutes) <= 1 {
+		return
+	}
+
+	for _, minute := range minutes {
+		ms := s.serverMetricBucket.Metrics(minute)
+
+		metric := metrics.AggregateServerMetrics(ms)
+
+		_, err := s.api.SendServerMetrics(metric.String())
+		if err != nil {
+			log.Println("Failed to send server metrics: ", err.Error())
+			break
+		}
+
+		s.serverMetricBucket.Remove(minute)
+
+		// stop sending if the bucket contains only one (the current) minute
+		if len(s.serverMetricBucket.Minutes()) <= 1 {
+			break
+		}
+	}
+}
+
+func (s *Sender) sendAppMetrics() {
+	bucket := s.appMetricBucket.Extract(s.config.AppBucketLimit)
+
+	_, err := s.api.SendEnvironmentMetrics(bucket.String())
 	if err != nil {
-		log.Println("Failed to send bucket.", err.Error())
+		log.Println("Failed to send app metrics.", err.Error())
+		time.Sleep(5 * time.Second)
 		s.appMetricBucket.Merge(bucket)
+		return
 	}
 
 	s.updateSentAt()
