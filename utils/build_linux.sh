@@ -6,4 +6,4 @@ env GOOS=linux \
       -X 'github.com/larashed/agent-go/config.GitCommit=$GIT_COMMIT'
       -X 'github.com/larashed/agent-go/config.GitTag=$TRAVIS_TAG'
     " -o \
-    build/linux/agent .
+    build/agent_linux_amd64 .

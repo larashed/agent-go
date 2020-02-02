@@ -6,4 +6,4 @@ env GOOS=darwin \
       -X 'github.com/larashed/agent-go/config.GitCommit=$GIT_COMMIT'
       -X 'github.com/larashed/agent-go/config.GitTag=$TRAVIS_TAG'
     " -o \
-    build/darwin/agent .
+    build/agent_darwin_amd64 .
