@@ -1,1 +1,2 @@
-build
+build/
+utils/build_test.sh

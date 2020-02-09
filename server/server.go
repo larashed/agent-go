@@ -1,7 +1,9 @@
 package server
 
 import (
+	"bufio"
 	"net"
+	"net/textproto"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -36,8 +38,7 @@ var ErrServerStopped = errors.New("server stopped")
 // Start always returns a non-nil error. After Stop(), the returned error is ErrServerStopped.
 func (s *Server) Start(handler DataHandler) (err error) {
 	// we can ignore this
-_:
-	syscall.Unlink(s.address)
+	_ = syscall.Unlink(s.address)
 
 	s.listener, err = net.Listen("unix", s.address)
 	if err != nil {
@@ -60,15 +61,18 @@ _:
 }
 
 func (s *Server) handleData(c net.Conn, handler DataHandler) {
+	reader := bufio.NewReader(c)
+	tp := textproto.NewReader(reader)
+
+	defer c.Close()
+
 	for {
-		buf := make([]byte, 5000)
-		nr, err := c.Read(buf)
+		line, err := tp.ReadLine()
 		if err != nil {
-			return
+			break
 		}
 
-		data := buf[0:nr]
-		go handler(string(data))
+		go handler(line)
 	}
 }
 
