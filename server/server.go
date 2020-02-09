@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"net"
 	"net/textproto"
+	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -68,11 +69,15 @@ func (s *Server) handleData(c net.Conn, handler DataHandler) {
 
 	for {
 		line, err := tp.ReadLine()
-		if err != nil {
-			break
+		if len(line) == 0 {
+			continue
 		}
 
-		go handler(line)
+		if err != nil {
+			return
+		}
+
+		go handler(strings.TrimSpace(line))
 	}
 }
 
