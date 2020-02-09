@@ -82,8 +82,7 @@ func (d *Daemon) Shutdown() {
 	d.stopCollectorServer <- struct{}{}
 	d.stopSocketServer <- struct{}{}
 
-	// TODO Could wait for stop events to be performed gracefully
-	time.Sleep(time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	log.Printf("Daemon stopped")
 
 	os.Exit(1)
