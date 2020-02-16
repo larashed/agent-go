@@ -22,7 +22,7 @@ const (
 	AppKeyFlagName       = "app-key"
 	SocketFlagName       = "socket"
 	JsonFlagName         = "json"
-	LoggingLevelFlagName = "level"
+	LoggingLevelFlagName = "log-level"
 )
 
 var (
@@ -49,7 +49,7 @@ var (
 	}
 	LoggingLevelFlag = &cli.StringFlag{
 		Name:  LoggingLevelFlagName,
-		Usage: "Output JSON",
+		Usage: "Logging level (info, debug, trace)",
 	}
 	JsonFlag = &cli.BoolFlag{
 		Name:  JsonFlagName,
