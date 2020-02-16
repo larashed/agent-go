@@ -7,6 +7,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/pkg/errors"
 )
 
@@ -48,6 +50,7 @@ func (s *Server) Start(handler DataHandler) (err error) {
 
 	for {
 		conn, err := s.listener.Accept()
+		log.Debug().Msg("received a new connection")
 		if err != nil {
 			select {
 			case <-s.listenerStop:
@@ -77,7 +80,9 @@ func (s *Server) handleData(c net.Conn, handler DataHandler) {
 			return
 		}
 
-		go handler(strings.TrimSpace(line))
+		log.Trace().Msgf("received message '%s' with length %d", line, len(line))
+
+		handler(strings.TrimSpace(line))
 	}
 }
 

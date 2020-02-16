@@ -1,2 +1,3 @@
 build/
 utils/build_test.sh
+utils/deploy.sh

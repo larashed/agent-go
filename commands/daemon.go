@@ -1,11 +1,12 @@
 package commands
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/errors"
 
@@ -43,9 +44,9 @@ func NewDaemonCommand(apiClient api.Api, socketServer socketserver.DomainSocketS
 }
 
 func (d *Daemon) Run() error {
-	log.Println("Starting daemon..")
+	log.Info().Msg("Starting daemon command")
 
-	config := monitoring.NewConfig(200, 5, 10)
+	config := monitoring.NewConfig(200, 10, 10)
 
 	appMetricBucket := buckets.NewAppMetricBucket()
 	serverMetricBucket := buckets.NewServerMetricBucket()
@@ -60,7 +61,7 @@ func (d *Daemon) Run() error {
 	go d.runServerMetricCollector(serverMetricCollector)
 	go d.runServerMetricSender(metricSender)
 
-	log.Printf("Daemon running with PID %d\n", os.Getpid())
+	log.Info().Msgf("daemon running with PID %d", os.Getpid())
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
@@ -68,14 +69,14 @@ func (d *Daemon) Run() error {
 	case err := <-d.errorChan:
 		return errors.Wrap(err, "daemon exited")
 	case sig := <-sigChan:
-		log.Printf("Daemon received %s signal", sig.String())
+		log.Info().Msgf("daemon received %s signal", sig.String())
 		d.Shutdown()
 		return nil
 	}
 }
 
 func (d *Daemon) Shutdown() {
-	log.Printf("Stopping daemon..")
+	log.Info().Msg("stopping daemon..")
 
 	d.stopSenderServer <- struct{}{}
 	d.stopSenderApp <- struct{}{}
@@ -83,7 +84,8 @@ func (d *Daemon) Shutdown() {
 	d.stopSocketServer <- struct{}{}
 
 	time.Sleep(100 * time.Millisecond)
-	log.Printf("Daemon stopped")
+
+	log.Info().Msg("daemon stopped")
 
 	os.Exit(1)
 }
@@ -93,14 +95,13 @@ func (d *Daemon) runSocketServer(bucket *buckets.AppMetricBucket) {
 		<-d.stopSocketServer
 		err := d.socketServer.Stop()
 		if err != nil {
-			log.Printf("Error stopping socker server: %s", err)
+			log.Info().Msgf("error stopping socker server: %s", err)
 		}
 
-		log.Println("Stopped socket service")
+		log.Info().Msg("stopped socket service")
 	}()
 
 	handleSocketMessage := func(message string) {
-		log.Printf("received %s with length %d", message, len(message))
 		if message == socketserver.QuitMessage {
 			d.Shutdown()
 
@@ -110,6 +111,7 @@ func (d *Daemon) runSocketServer(bucket *buckets.AppMetricBucket) {
 		bucket.Add(metrics.NewAppMetric(message))
 	}
 
+	log.Info().Msg("starting socket service")
 	if err := d.socketServer.Start(handleSocketMessage); err != socketserver.ErrServerStopped {
 		d.errorChan <- err
 	}
@@ -120,9 +122,10 @@ func (d *Daemon) runServerMetricCollector(serverMetricCollector *collectors.Serv
 		<-d.stopCollectorServer
 		serverMetricCollector.Stop()
 
-		log.Println("Stopped server metric collector")
+		log.Info().Msg("stopped server metric collector")
 	}()
 
+	log.Info().Msg("starting server metric collection")
 	serverMetricCollector.Start()
 }
 
@@ -131,9 +134,10 @@ func (d *Daemon) runServerMetricSender(sender *sender.Sender) {
 		<-d.stopSenderServer
 		sender.StopSendingServerMetrics()
 
-		log.Println("Stopped server metric sender")
+		log.Info().Msg("stopped server metric sender")
 	}()
 
+	log.Info().Msg("starting server metric sender")
 	sender.SendServerMetrics()
 }
 
@@ -142,8 +146,9 @@ func (d *Daemon) runAppMetricSender(sender *sender.Sender) {
 		<-d.stopSenderApp
 		sender.StopSendingAppMetrics()
 
-		log.Println("Stopped app metric sender")
+		log.Info().Msg("stopped app metric sender")
 	}()
 
+	log.Info().Msg("starting app metric sender")
 	sender.SendAppMetrics()
 }

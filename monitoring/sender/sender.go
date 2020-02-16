@@ -1,14 +1,15 @@
 package sender
 
 import (
-	"log"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/larashed/agent-go/api"
 	"github.com/larashed/agent-go/monitoring"
 	"github.com/larashed/agent-go/monitoring/buckets"
-	metrics "github.com/larashed/agent-go/monitoring/metrics"
+	"github.com/larashed/agent-go/monitoring/metrics"
 )
 
 type Sender struct {
@@ -70,7 +71,11 @@ func (s *Sender) SendAppMetrics() {
 		for {
 			select {
 			case <-s.appMetricBucket.Channel:
-				if s.appMetricBucket.Count() >= s.config.AppBucketLimit {
+				if count := s.appMetricBucket.Count(); count >= s.config.AppBucketLimit {
+					log.Debug().Str("metric", "app").
+						Int("metrics", count).
+						Msg("sending from channel read")
+
 					go s.sendAppMetrics()
 				}
 			case <-s.stopAppMetricSend:
@@ -91,7 +96,11 @@ func (s *Sender) SendAppMetrics() {
 			case t := <-ticker.C:
 				// send data if the bucket is not empty and there hasn't been a send in n seconds
 				if t.Sub(s.sentAt).Seconds() > float64(s.config.AppBucketNotFillingSeconds) {
-					if s.appMetricBucket.Count() > 0 {
+					if count := s.appMetricBucket.Count(); count > 0 {
+						log.Debug().Str("metric", "app").
+							Int("count", count).
+							Msg("sending from ticker read")
+
 						go s.sendAppMetrics()
 					}
 				}
@@ -104,6 +113,7 @@ func (s *Sender) updateSentAt() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	log.Debug().Msg("Updating sentAt")
 	s.sentAt = time.Now()
 }
 
@@ -120,11 +130,21 @@ func (s *Sender) aggregateAndSendServerMetrics() {
 
 		metric := metrics.AggregateServerMetrics(ms)
 
+		log.Debug().
+			Str("metric", "server").
+			Int("minute", minute).
+			Msg("sending server metrics")
+
 		_, err := s.api.SendServerMetrics(metric.String())
 		if err != nil {
-			log.Println("Failed to send server metrics: ", err.Error())
+			log.Warn().Msg("Failed to send server metrics: " + err.Error())
 			break
 		}
+
+		log.Debug().
+			Str("metric", "server").
+			Int("minute", minute).
+			Msg("removing minute from bucket")
 
 		s.serverMetricBucket.Remove(minute)
 
@@ -136,13 +156,25 @@ func (s *Sender) aggregateAndSendServerMetrics() {
 }
 
 func (s *Sender) sendAppMetrics() {
+	count := s.appMetricBucket.Count()
 	bucket := s.appMetricBucket.Extract(s.config.AppBucketLimit)
+
+	log.Debug().
+		Int("total-size", count).
+		Int("chunk-size", bucket.Count()).
+		Str("metric", "app").
+		Msg("sending app metrics")
 
 	_, err := s.api.SendEnvironmentMetrics(bucket.String())
 	if err != nil {
-		log.Println("Failed to send app metrics.", err.Error())
+		log.Error().Msg("failed to send app metrics: " + err.Error())
+		log.Debug().Msg("sleeping before adding back the metrics to the app bucket")
 		time.Sleep(5 * time.Second)
+
 		s.appMetricBucket.Merge(bucket)
+		log.Debug().
+			Int("count", s.appMetricBucket.Count()).
+			Msg("merged app metric buckets")
 		return
 	}
 

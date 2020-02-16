@@ -7,6 +7,7 @@ import (
 
 	"github.com/larashed/agent-go/api"
 	"github.com/larashed/agent-go/commands"
+	"github.com/larashed/agent-go/log"
 	socket_server "github.com/larashed/agent-go/server"
 )
 
@@ -15,12 +16,13 @@ type App struct {
 }
 
 const (
-	ApiURLFlagName = "api-url"
-	AppEnvFlagName = "env"
-	AppIdFlagName  = "app-id"
-	AppKeyFlagName = "app-key"
-	SocketFlagName = "socket"
-	JsonFlagName   = "json"
+	ApiURLFlagName       = "api-url"
+	AppEnvFlagName       = "env"
+	AppIdFlagName        = "app-id"
+	AppKeyFlagName       = "app-key"
+	SocketFlagName       = "socket"
+	JsonFlagName         = "json"
+	LoggingLevelFlagName = "level"
 )
 
 var (
@@ -45,6 +47,10 @@ var (
 		Name:  SocketFlagName,
 		Usage: "Location of the unix socket",
 	}
+	LoggingLevelFlag = &cli.StringFlag{
+		Name:  LoggingLevelFlagName,
+		Usage: "Output JSON",
+	}
 	JsonFlag = &cli.BoolFlag{
 		Name:  JsonFlagName,
 		Usage: "Output JSON",
@@ -64,6 +70,9 @@ func NewApp() *App {
 						c.String(AppIdFlagName),
 						c.String(AppKeyFlagName),
 					)
+
+					log.Bootstrap(log.ParseLoggingLevel(c.String(LoggingLevelFlagName)))
+
 					server := socket_server.NewServer(c.String(SocketFlagName))
 
 					return commands.NewDaemonCommand(apiClient, server).Run()
@@ -74,6 +83,7 @@ func NewApp() *App {
 					AppIdFlag,
 					AppKeyFlag,
 					SocketFlag,
+					LoggingLevelFlag,
 				},
 			},
 			{
