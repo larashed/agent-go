@@ -3,7 +3,6 @@ package server
 import (
 	"bufio"
 	"net"
-	"net/textproto"
 	"strings"
 	"syscall"
 
@@ -65,25 +64,26 @@ func (s *Server) Start(handler DataHandler) (err error) {
 }
 
 func (s *Server) handleData(c net.Conn, handler DataHandler) {
-	reader := bufio.NewReader(c)
-	tp := textproto.NewReader(reader)
-
 	defer c.Close()
+	var (
+		buf = make([]byte, 1024)
+		r   = bufio.NewReader(c)
+	)
+
+	var bts []byte
 
 	for {
-		line, err := tp.ReadLine()
-		if len(line) == 0 {
-			continue
-		}
-
+		n, err := r.Read(buf)
 		if err != nil {
-			return
+			break
 		}
-
-		log.Trace().Msgf("received message '%s' with length %d", line, len(line))
-
-		handler(strings.TrimSpace(line))
+		bts = append(bts, buf[:n]...)
 	}
+
+	line := string(bts)
+	log.Trace().Msgf("received message '%s' with length %d", line, len(line))
+
+	handler(strings.TrimSpace(line))
 }
 
 func (s *Server) Stop() error {
