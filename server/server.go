@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"net"
+	"os"
 	"strings"
 	"syscall"
 
@@ -40,7 +41,11 @@ var ErrServerStopped = errors.New("server stopped")
 // Start always returns a non-nil error. After Stop(), the returned error is ErrServerStopped.
 func (s *Server) Start(handler DataHandler) (err error) {
 	// we can ignore this
-	_ = syscall.Unlink(s.address)
+	if fileExists(s.address) {
+		if err := syscall.Unlink(s.address); err != nil {
+			log.Err(err).Msg("failed to delete existing socket")
+		}
+	}
 
 	s.listener, err = net.Listen("unix", s.address)
 	if err != nil {
@@ -89,4 +94,12 @@ func (s *Server) handleData(c net.Conn, handler DataHandler) {
 func (s *Server) Stop() error {
 	close(s.listenerStop)
 	return s.listener.Close()
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
