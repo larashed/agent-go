@@ -50,6 +50,7 @@ var (
 	LoggingLevelFlag = &cli.StringFlag{
 		Name:  LoggingLevelFlagName,
 		Usage: "Logging level (info, debug, trace)",
+		Value: "debug",
 	}
 	JsonFlag = &cli.BoolFlag{
 		Name:  JsonFlagName,

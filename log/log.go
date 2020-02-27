@@ -50,7 +50,7 @@ func ParseLoggingLevel(level string) zerolog.Level {
 		return zerolog.TraceLevel
 	}
 
-	return zerolog.TraceLevel
+	return zerolog.DebugLevel
 }
 
 // trimLeftInclusive trims left part of the string up to and including the prefix.
