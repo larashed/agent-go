@@ -14,47 +14,45 @@ import (
 
 type DataHandler func(string)
 
-type DomainSocketServer interface {
-	Start(handler DataHandler) error
-	Stop() error
-}
-
 type Server struct {
-	address      string
-	listener     net.Listener
-	listenerStop chan struct{}
+	socketType    string
+	socketAddress string
+	listener      net.Listener
+	listenerStop  chan struct{}
 }
 
-func NewServer(address string) *Server {
+func NewServer(networkType, networkAddress string) *Server {
 	return &Server{
-		address:      address,
-		listenerStop: make(chan struct{}),
+		socketType:    networkType,
+		socketAddress: networkAddress,
+		listenerStop:  make(chan struct{}),
 	}
 }
 
 // ErrServerStopped is returned by the Server's Start() method after a call to Stop().
 var ErrServerStopped = errors.New("server stopped")
 
-// Start listens on the TCP network address in server.address and then
+// Start listens on the TCP network socketAddress in server.socketAddress and then
 // calls given DataHandler to handle requests on incoming connections.
 //
 // Start always returns a non-nil error. After Stop(), the returned error is ErrServerStopped.
 func (s *Server) Start(handler DataHandler) (err error) {
 	// we can ignore this
-	if fileExists(s.address) {
-		if err := syscall.Unlink(s.address); err != nil {
-			log.Err(err).Msg("failed to delete existing socket")
+	if s.socketType == "unix" && fileExists(s.socketAddress) {
+		log.Debug().Msg("Socket exists. Trying to delete.")
+
+		if err := syscall.Unlink(s.socketAddress); err != nil {
+			log.Err(err).Msg("Failed to delete existing socket")
 		}
 	}
 
-	s.listener, err = net.Listen("unix", s.address)
+	s.listener, err = net.Listen(s.socketType, s.socketAddress)
 	if err != nil {
-		return errors.Wrapf(err, `socket "%s" opening failed`, s.address)
+		return errors.Wrapf(err, `Failed to open socket to "%s"`, s.socketAddress)
 	}
 
 	for {
 		conn, err := s.listener.Accept()
-		log.Debug().Msg("received a new connection")
 		if err != nil {
 			select {
 			case <-s.listenerStop:
@@ -64,6 +62,7 @@ func (s *Server) Start(handler DataHandler) (err error) {
 			}
 		}
 
+		log.Debug().Msg("Received a new connection")
 		go s.handleData(conn, handler)
 	}
 }
@@ -86,7 +85,7 @@ func (s *Server) handleData(c net.Conn, handler DataHandler) {
 	}
 
 	line := string(bts)
-	log.Trace().Msgf("received message '%s' with length %d", line, len(line))
+	log.Trace().Msgf("Received message:\n'%s' with length %d", line, len(line))
 
 	handler(strings.TrimSpace(line))
 }

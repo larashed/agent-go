@@ -23,6 +23,7 @@ func Bootstrap(level zerolog.Level) {
 	zerolog.TimeFieldFormat = timeFormat
 	var trimPrefixes = []string{
 		"/github.com/larashed/agent-go",
+		"go/src/larashed/",
 		"/vendor",
 		"/go/pkg/mod",
 	}
