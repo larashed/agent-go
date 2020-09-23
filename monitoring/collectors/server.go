@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/load"
@@ -17,13 +19,18 @@ import (
 )
 
 type ServerMetricCollector struct {
+	inDocker          bool
 	bucket            *buckets.ServerMetricBucket
 	intervalInSeconds int
 	stop              chan int
 }
 
-func NewServerMetricCollector(bucket *buckets.ServerMetricBucket, intervalInSeconds int) *ServerMetricCollector {
+func NewServerMetricCollector(
+	bucket *buckets.ServerMetricBucket,
+	intervalInSeconds int,
+	inDocker bool) *ServerMetricCollector {
 	return &ServerMetricCollector{
+		inDocker,
 		bucket,
 		intervalInSeconds,
 		make(chan int, 0),
@@ -35,8 +42,12 @@ func (smc *ServerMetricCollector) Start() {
 	defer ticker.Stop()
 
 	// lets measure at start
-	metric, _ := smc.buildServerMetrics()
-	smc.bucket.Add(metric)
+	metric, err := smc.buildServerMetrics()
+	if err != nil {
+		log.Error().Msgf("Failed to collect server metrics: %v", err)
+	} else {
+		smc.bucket.Add(metric)
+	}
 
 	for {
 		select {
@@ -45,6 +56,8 @@ func (smc *ServerMetricCollector) Start() {
 		case <-ticker.C:
 			metric, err := smc.buildServerMetrics()
 			if err != nil {
+				log.Error().Msgf("Failed to collect server metrics: %v", err)
+
 				continue
 			}
 			smc.bucket.Add(metric)
@@ -86,16 +99,23 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 		metric.DiskUsedPercentage = d.UsedPercent
 	}
 
-	s, err := smc.Services()
-	if err == nil {
-		metric.Services = s
+	if !smc.inDocker {
+		s, err := smc.Services()
+		if err == nil {
+			metric.Services = s
+		}
 	}
 
 	metric.CreatedAt = time.Now()
 
-	hostname, err := os.Hostname()
-	if err == nil {
+	hostname := os.Getenv("HOST_HOSTNAME")
+	if len(hostname) != 0 {
 		metric.Hostname = hostname
+	} else {
+		hostname, err := os.Hostname()
+		if err == nil {
+			metric.Hostname = hostname
+		}
 	}
 
 	return metric, err

@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/larashed/agent-go/api"
+	"github.com/larashed/agent-go/config"
 	"github.com/larashed/agent-go/monitoring"
 	"github.com/larashed/agent-go/monitoring/buckets"
 	"github.com/larashed/agent-go/monitoring/collectors"
@@ -19,9 +20,10 @@ import (
 	socketserver "github.com/larashed/agent-go/server"
 )
 
-type Daemon struct {
+type RunCommand struct {
+	config       *config.Config
 	api          api.Api
-	socketServer socketserver.DomainSocketServer
+	socketServer *socketserver.Server
 
 	stopSocketServer    chan struct{}
 	stopCollectorServer chan struct{}
@@ -30,8 +32,9 @@ type Daemon struct {
 	errorChan           chan error
 }
 
-func NewDaemonCommand(apiClient api.Api, socketServer socketserver.DomainSocketServer) *Daemon {
-	return &Daemon{
+func NewRunCommand(cfg *config.Config, apiClient api.Api, socketServer *socketserver.Server) *RunCommand {
+	return &RunCommand{
+		config:       cfg,
 		api:          apiClient,
 		socketServer: socketServer,
 
@@ -43,17 +46,22 @@ func NewDaemonCommand(apiClient api.Api, socketServer socketserver.DomainSocketS
 	}
 }
 
-func (d *Daemon) Run() error {
-	log.Info().Msg("Starting daemon command")
+func (d *RunCommand) Run() error {
+	log.Info().Msgf("Starting agent with version: %s", config.GitTag)
+	log.Trace().Msgf("Config: %s", d.config.String())
 
-	config := monitoring.NewConfig(200, 10, 10)
+	cfg := monitoring.NewConfig(200, 10, 10)
 
 	appMetricBucket := buckets.NewAppMetricBucket()
 	serverMetricBucket := buckets.NewServerMetricBucket()
 
-	serverMetricCollector := collectors.NewServerMetricCollector(serverMetricBucket, config.ServerMetricCollectionInterval)
+	serverMetricCollector := collectors.NewServerMetricCollector(
+		serverMetricBucket,
+		cfg.ServerMetricCollectionInterval,
+		d.config.InDocker,
+	)
 
-	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, config)
+	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, cfg)
 
 	go d.runSocketServer(appMetricBucket)
 	go d.runAppMetricSender(metricSender)
@@ -61,22 +69,23 @@ func (d *Daemon) Run() error {
 	go d.runServerMetricCollector(serverMetricCollector)
 	go d.runServerMetricSender(metricSender)
 
-	log.Info().Msgf("daemon running with PID %d", os.Getpid())
+	log.Info().Msgf("Agent running with PID %d", os.Getpid())
+	log.Info().Msgf("Socket address: %s://%s", d.config.SocketType, d.config.SocketAddress)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	select {
 	case err := <-d.errorChan:
-		return errors.Wrap(err, "daemon exited")
+		return errors.Wrap(err, "Agent exited")
 	case sig := <-sigChan:
-		log.Info().Msgf("daemon received %s signal", sig.String())
+		log.Info().Msgf("Agent received exit signal: %s", sig.String())
 		d.Shutdown()
 		return nil
 	}
 }
 
-func (d *Daemon) Shutdown() {
-	log.Info().Msg("stopping daemon..")
+func (d *RunCommand) Shutdown() {
+	log.Info().Msg("Stopping agent")
 
 	d.stopSenderServer <- struct{}{}
 	d.stopSenderApp <- struct{}{}
@@ -85,20 +94,20 @@ func (d *Daemon) Shutdown() {
 
 	time.Sleep(100 * time.Millisecond)
 
-	log.Info().Msg("daemon stopped")
+	log.Info().Msg("Agent stopped")
 
 	os.Exit(1)
 }
 
-func (d *Daemon) runSocketServer(bucket *buckets.AppMetricBucket) {
+func (d *RunCommand) runSocketServer(bucket *buckets.AppMetricBucket) {
 	go func() {
 		<-d.stopSocketServer
 		err := d.socketServer.Stop()
 		if err != nil {
-			log.Info().Msgf("error stopping socker server: %s", err)
+			log.Info().Msgf("Error stopping socket server: %s", err)
 		}
 
-		log.Info().Msg("stopped socket service")
+		log.Info().Msg("Stopped socket service")
 	}()
 
 	handleSocketMessage := func(message string) {
@@ -111,44 +120,44 @@ func (d *Daemon) runSocketServer(bucket *buckets.AppMetricBucket) {
 		bucket.Add(metrics.NewAppMetric(message))
 	}
 
-	log.Info().Msg("starting socket service")
+	log.Info().Msg("Starting socket service")
 	if err := d.socketServer.Start(handleSocketMessage); err != socketserver.ErrServerStopped {
 		d.errorChan <- err
 	}
 }
 
-func (d *Daemon) runServerMetricCollector(serverMetricCollector *collectors.ServerMetricCollector) {
+func (d *RunCommand) runServerMetricCollector(serverMetricCollector *collectors.ServerMetricCollector) {
 	go func() {
 		<-d.stopCollectorServer
 		serverMetricCollector.Stop()
 
-		log.Info().Msg("stopped server metric collector")
+		log.Info().Msg("Stopped server metric collector")
 	}()
 
-	log.Info().Msg("starting server metric collection")
+	log.Info().Msg("Starting server metric collection")
 	serverMetricCollector.Start()
 }
 
-func (d *Daemon) runServerMetricSender(sender *sender.Sender) {
+func (d *RunCommand) runServerMetricSender(sender *sender.Sender) {
 	go func() {
 		<-d.stopSenderServer
 		sender.StopSendingServerMetrics()
 
-		log.Info().Msg("stopped server metric sender")
+		log.Info().Msg("Stopped server metric sender")
 	}()
 
-	log.Info().Msg("starting server metric sender")
+	log.Info().Msg("Starting server metric sender")
 	sender.SendServerMetrics()
 }
 
-func (d *Daemon) runAppMetricSender(sender *sender.Sender) {
+func (d *RunCommand) runAppMetricSender(sender *sender.Sender) {
 	go func() {
 		<-d.stopSenderApp
 		sender.StopSendingAppMetrics()
 
-		log.Info().Msg("stopped app metric sender")
+		log.Info().Msg("Stopped app metric sender")
 	}()
 
-	log.Info().Msg("starting app metric sender")
+	log.Info().Msg("Starting app metric sender")
 	sender.SendAppMetrics()
 }

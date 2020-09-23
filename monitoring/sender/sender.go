@@ -135,6 +135,10 @@ func (s *Sender) aggregateAndSendServerMetrics() {
 			Int("minute", minute).
 			Msg("sending server metrics")
 
+		log.Trace().
+			Str("metric", "server").
+			Msgf("metrics: %s", metric.String())
+
 		_, err := s.api.SendServerMetrics(metric.String())
 		if err != nil {
 			log.Warn().Msg("Failed to send server metrics: " + err.Error())

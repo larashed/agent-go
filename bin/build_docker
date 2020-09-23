@@ -1,0 +1,2 @@
+docker build --build-arg SOURCE_COMMIT=xxxxxxx --build-arg SOURCE_BRANCH=dev.source -t larashed-agent .
+docker image prune --filter label=stage=builder -f

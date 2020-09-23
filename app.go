@@ -7,6 +7,7 @@ import (
 
 	"github.com/larashed/agent-go/api"
 	"github.com/larashed/agent-go/commands"
+	"github.com/larashed/agent-go/config"
 	"github.com/larashed/agent-go/log"
 	socket_server "github.com/larashed/agent-go/server"
 )
@@ -15,81 +16,58 @@ type App struct {
 	app *cli.App
 }
 
-const (
-	ApiURLFlagName       = "api-url"
-	AppEnvFlagName       = "env"
-	AppIdFlagName        = "app-id"
-	AppKeyFlagName       = "app-key"
-	SocketFlagName       = "socket"
-	JsonFlagName         = "json"
-	LoggingLevelFlagName = "log-level"
-)
-
-var (
-	ApiUrlFlag = &cli.StringFlag{
-		Name:  ApiURLFlagName,
-		Usage: "Larashed API URL",
-		Value: "https://api.larashed.com/",
-	}
-	AppEnvFlag = &cli.StringFlag{
-		Name:  AppEnvFlagName,
-		Usage: "Application environment",
-	}
-	AppIdFlag = &cli.StringFlag{
-		Name:  AppIdFlagName,
-		Usage: "Your application API ID token",
-	}
-	AppKeyFlag = &cli.StringFlag{
-		Name:  AppKeyFlagName,
-		Usage: "Your application API secret key",
-	}
-	SocketFlag = &cli.StringFlag{
-		Name:  SocketFlagName,
-		Usage: "Location of the unix socket",
-	}
-	LoggingLevelFlag = &cli.StringFlag{
-		Name:  LoggingLevelFlagName,
-		Usage: "Logging level (info, debug, trace)",
-		Value: "debug",
-	}
-	JsonFlag = &cli.BoolFlag{
-		Name:  JsonFlagName,
-		Usage: "Output JSON",
-	}
-)
-
 func NewApp() *App {
 	app := &cli.App{
+		Name:        "Larashed",
+		Usage:       "Monitoring agent",
+		Description: "Monitoring agent for https://larashed.com",
 		Commands: []*cli.Command{
 			{
-				Name:  "daemon",
-				Usage: "run agent in daemon mode",
+				Name:    "run",
+				Usage:   "Starts server monitoring & socket server",
+				Aliases: []string{"daemon"},
 				Action: func(c *cli.Context) error {
+					cfg := newConfig(c)
+					setEnvVariables(cfg)
+
+					// validate required flags and output error message with help
+					if !validateConfig(cfg.SocketAddress, SocketAddressFlagName) ||
+						!validateConfig(cfg.AppId, AppIdFlagName) ||
+						!validateConfig(cfg.AppKey, AppKeyFlagName) ||
+						!validateConfig(cfg.AppEnvironment, AppEnvFlagName) {
+						return cli.ShowCommandHelp(c, "run")
+					}
+
+					log.Bootstrap(log.ParseLoggingLevel(cfg.LogLevel))
+
 					apiClient := api.NewClient(
-						c.String(ApiURLFlagName),
-						c.String(AppEnvFlagName),
-						c.String(AppIdFlagName),
-						c.String(AppKeyFlagName),
+						cfg.ApiUrl,
+						cfg.AppEnvironment,
+						cfg.AppId,
+						cfg.AppKey,
 					)
 
-					log.Bootstrap(log.ParseLoggingLevel(c.String(LoggingLevelFlagName)))
+					server := socket_server.NewServer(cfg.SocketType, cfg.SocketAddress)
 
-					server := socket_server.NewServer(c.String(SocketFlagName))
-
-					return commands.NewDaemonCommand(apiClient, server).Run()
+					return commands.NewRunCommand(cfg, apiClient, server).Run()
 				},
 				Flags: []cli.Flag{
+					SocketTypeFlag,
+					SocketAddressFlag,
+					OldSocketAddressFlag,
 					ApiUrlFlag,
 					AppEnvFlag,
 					AppIdFlag,
 					AppKeyFlag,
-					SocketFlag,
+					ProcPathFlag,
+					SysPathFlag,
+					HostnameFlag,
 					LoggingLevelFlag,
 				},
 			},
 			{
 				Name:  "version",
-				Usage: "agent version",
+				Usage: "print agent version",
 				Action: func(c *cli.Context) error {
 					commands.NewVersionCommand(c.Bool(JsonFlagName))
 
@@ -107,4 +85,48 @@ func NewApp() *App {
 
 func (a *App) Run() error {
 	return a.app.Run(os.Args)
+}
+
+func newConfig(c *cli.Context) *config.Config {
+	cfg := &config.Config{
+		ApiUrl: c.String(ApiURLFlagName),
+
+		PathProcfs: c.String(ProcPathFlagName),
+		PathSysfs:  c.String(SysPathFlagName),
+
+		Hostname: c.String(HostnameFlagName),
+		InDocker: os.Getenv("DOCKER_BUILD") == "1",
+
+		LogLevel: c.String(LoggingLevelFlagName),
+
+		AppEnvironment: c.String(AppEnvFlagName),
+		AppId:          c.String(AppIdFlagName),
+		AppKey:         c.String(AppKeyFlagName),
+
+		SocketAddress: c.String(SocketAddressFlagName),
+		SocketType:    c.String(SocketTypeFlagName),
+	}
+
+	if len(cfg.SocketAddress) == 0 {
+		cfg.SocketAddress = c.String(SocketAddressOldFlagName)
+	}
+
+	return cfg
+}
+
+func validateConfig(value, flag string) bool {
+	if len(value) == 0 {
+		println("Incorrect Usage: --" + flag + " is required\n")
+
+		return false
+	}
+
+	return true
+}
+
+// used by github.com/shirou/gopsutil and internal code
+func setEnvVariables(cfg *config.Config) {
+	os.Setenv("HOST_PROC", cfg.PathProcfs)
+	os.Setenv("HOST_SYS", cfg.PathSysfs)
+	os.Setenv("HOST_HOSTNAME", cfg.Hostname)
 }

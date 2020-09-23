@@ -3,8 +3,8 @@ go:
   - "1.13"
 
 script:
-  - ./utils/build_darwin.sh
-  - ./utils/build_linux.sh
+  - ./bin/build_darwin
+  - ./bin/build_linux
 
 deploy:
   provider: releases

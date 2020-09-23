@@ -1,0 +1,8 @@
+docker run -p 127.0.0.1:8100:8100 larashed-agent \
+  --app-id="app-id" \
+  --app-key="app-key" \
+  --env="local" \
+  --socket-type="tcp" \
+  --socket-address="0.0.0.0:8100" \
+  --log-level=trace \
+  --hostname=`hostname`
