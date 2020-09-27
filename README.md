@@ -2,6 +2,7 @@ Larashed Go Agent
 ==============
 
 [![Build Status](https://travis-ci.com/larashed/agent-go.svg?branch=master)](https://travis-ci.com/larashed/agent-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/larashed/agent-go)](https://goreportcard.com/report/github.com/larashed/agent-go)
 
 Larashed Go agent starts a socket server and collects metrics from your server and Laravel application.
 These metrics are then sent to [larashed.com](https://larashed.com/).
