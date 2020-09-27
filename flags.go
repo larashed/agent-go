@@ -26,9 +26,9 @@ var (
 		Value: "https://api.larashed.com/",
 	}
 	AppEnvFlag = &cli.StringFlag{
-		Name:  AppEnvFlagName,
+		Name:    AppEnvFlagName,
 		Aliases: []string{"app-env"},
-		Usage: "Application's environment name",
+		Usage:   "Application's environment name",
 	}
 	AppIdFlag = &cli.StringFlag{
 		Name:  AppIdFlagName,
@@ -75,4 +75,3 @@ var (
 		Usage: "Output JSON",
 	}
 )
-
