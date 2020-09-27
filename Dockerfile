@@ -31,4 +31,4 @@ COPY --from=builder /go/bin/agent /go/bin/agent
 
 VOLUME /host/proc /host/sys
 
-ENTRYPOINT ["/go/bin/agent", "run"]
+ENTRYPOINT ["/go/bin/agent", "run", "--path-proc=/host/proc", "--path-sys=/host/sys"]
