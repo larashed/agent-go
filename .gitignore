@@ -1,3 +1,4 @@
 build/
 bin/build_test
 bin/deploy
+signing/

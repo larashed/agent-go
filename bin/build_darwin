@@ -1,9 +1,15 @@
 export GIT_COMMIT=$(git rev-list -1 HEAD)
 
-env GOOS=darwin \
-    GOARCH=amd64 \
-    go build -ldflags "
-      -X 'github.com/larashed/agent-go/config.GitCommit=$GIT_COMMIT'
-      -X 'github.com/larashed/agent-go/config.GitTag=$TRAVIS_TAG'
-    " -o \
-    build/agent_darwin_amd64 .
+release_file="agent_darwin_amd64"
+release_hash="${release_file}.sha256sum"
+
+GOOS=darwin \
+  GOARCH=amd64 \
+  go build -ldflags "
+    -X 'github.com/larashed/agent-go/config.GitCommit=$GIT_COMMIT'
+    -X 'github.com/larashed/agent-go/config.GitTag=$TRAVIS_TAG'
+  " -o \
+  build/$release_file .
+
+cd build
+sha256sum "${release_file}" > "${release_hash}"

@@ -1,0 +1,2 @@
+./bin/build_linux
+./bin/build_darwin

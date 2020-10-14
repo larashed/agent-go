@@ -3,15 +3,16 @@ go:
   - "1.15"
 
 script:
-  - ./bin/build_darwin
-  - ./bin/build_linux
+  - ./bin/ci
 
 deploy:
   provider: releases
   api_key: $GITHUB_ACCESS_TOKEN
   file:
     - ./build/agent_linux_amd64
+    - ./build/agent_linux_amd64.sha256sum
     - ./build/agent_darwin_amd64
+    - ./build/agent_darwin_amd64.sha256sum
   skip_cleanup: true
   on:
     tags: true
