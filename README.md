@@ -11,8 +11,6 @@ These metrics are then sent to [larashed.com](https://larashed.com/).
 
 There are 2 supported communication types: TCP and Unix domain socket.
 
-**Note:** Make sure program arguments match `larashed/agent` composer package configuration.
-
 ## Platform support
 
 We currently support macOS and major Linux (amd64) distributions. Thanks to the nature of Golang, we should be able
@@ -20,6 +18,41 @@ We currently support macOS and major Linux (amd64) distributions. Thanks to the 
 
 ## How to run
 
+### Install as a systemd service
+```
+curl -sSL 'https://install.larashed.com/linux' | sudo LARASHED_APP_ID='xxxx' LARASHED_APP_KEY='zzzz' LARASHED_APP_ENV='production' sh
+```
+
+The following environment variables will be read if present:
+- `LARASHED_APP_ID`
+- `LARASHED_APP_KEY`
+- `LARASHED_APP_ENV`
+- `LARASHED_SOCKET_TYPE`
+- `LARASHED_SOCKET_ADDRESS`
+
+Agent configuration will be stored in `/etc/larashed/larashed.conf`.
+
+#### Post installation
+
+Download the script:
+
+```
+curl -sSL 'https://install.larashed.com/linux' -o /tmp/larashed-installer.sh && chmod +x /tmp/larashed-installer.sh
+```
+
+#### Update agent to the latest version
+
+```
+sudo /tmp/larashed-installer.sh --update
+```
+
+#### Completely uninstall the agent
+
+```
+sudo /tmp/larashed-installer.sh --uninstall
+```
+
+### Manual run
 Download the latest binary from the [releases](https://github.com/larashed/agent-go/releases/latest) page and run:
 ```
 agent_linux_amd64 run \
@@ -34,8 +67,8 @@ agent_linux_amd64 run \
 You can run our agent as a Docker container.
 Check out our images on [Docker hub](https://hub.docker.com/r/larashed/agent/tags).
 
-**Note:** you will have to mount host `/proc` and `/sys` directories to `/host` container directory for server monitoring to
- work.
+**Note:** you will have to mount host `/proc` and `/sys` directories to `/host` container directory for host machine
+ resource monitoring to work.
 
 To start the latest tagged image, run:
 ```
