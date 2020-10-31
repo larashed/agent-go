@@ -36,3 +36,4 @@ func TestServiceListParser(t *testing.T) {
 	}, services[3])
 	assert.Equal(t, 4, len(services))
 }
+

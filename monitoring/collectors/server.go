@@ -103,6 +103,8 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 		if err == nil {
 			metric.Services = s
 		}
+
+		smc.DockerContainersExec()
 	}
 
 	metric.CreatedAt = time.Now()
@@ -161,6 +163,16 @@ func (smc *ServerMetricCollector) Load() (*metrics.ServerLoad, error) {
 
 func (smc *ServerMetricCollector) Services() (services []metrics.Service, err error) {
 	cmd := exec.Command("service", "--status-all")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	return parseServiceList(string(output)), nil
+}
+
+func (smc *ServerMetricCollector) DockerContainersExec() (services []metrics.Service, err error) {
+	cmd := exec.Command("docker", "stats", "--no-stream", "--format", "'{{ json . }}'")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
