@@ -104,7 +104,7 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 			metric.Services = s
 		}
 
-		smc.DockerContainersExec()
+		DockerContainersApi()
 	}
 
 	metric.CreatedAt = time.Now()
