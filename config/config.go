@@ -16,6 +16,8 @@ type Config struct {
 	LogLevel       string
 	PathProcfs     string
 	PathSysfs      string
+
+	CollectServerResources bool
 }
 
 func (c *Config) String() string {

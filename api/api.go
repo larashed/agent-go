@@ -21,6 +21,7 @@ type Client struct {
 	apiKey    string
 	apiSecret string
 	env       string
+	hostname  string
 	client    http.Client
 }
 
@@ -29,10 +30,11 @@ type Response struct {
 	Message string `json:"message"`
 }
 
-func NewClient(url, env, key, secret string) *Client {
+func NewClient(url, env, key, secret, hostname string) *Client {
 	return &Client{
 		url:       url,
 		env:       env,
+		hostname:  hostname,
 		apiKey:    key,
 		apiSecret: secret,
 		client: http.Client{
@@ -61,6 +63,7 @@ func (c *Client) doRequest(method, url string, data string) (*Response, error) {
 
 	req.Header.Set("User-Agent", "Larashed/Agent v1.0")
 	req.Header.Set("Larashed-Environment", c.env)
+	req.Header.Set("Larashed-Hostname", c.hostname)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.SetBasicAuth(c.apiKey, c.apiSecret)

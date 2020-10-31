@@ -1,7 +1,6 @@
 package collectors
 
 import (
-	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -108,16 +107,6 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 
 	metric.CreatedAt = time.Now()
 
-	hostname := os.Getenv("HOST_HOSTNAME")
-	if len(hostname) != 0 {
-		metric.Hostname = hostname
-	} else {
-		hostname, err := os.Hostname()
-		if err == nil {
-			metric.Hostname = hostname
-		}
-	}
-
 	return metric, err
 }
 
@@ -181,7 +170,7 @@ func (smc *ServerMetricCollector) Services() (services []metrics.Service, err er
 }
 
 func parseServiceList(output string) (services []metrics.Service) {
-	list := strings.Split(string(output), "\n")
+	list := strings.Split(output, "\n")
 	for i := 0; i < len(list); i++ {
 		r, err := regexp.Compile(`\[\s(.)\s\](.*)`)
 		if err != nil {

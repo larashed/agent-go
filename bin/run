@@ -1,0 +1,13 @@
+go run \
+-ldflags "
+  -X 'github.com/larashed/agent-go/config.GitCommit=xxx'
+  -X 'github.com/larashed/agent-go/config.GitTag=dev'
+" \
+. \
+run --log-level=trace \
+--socket-address=0.0.0.0:33001 \
+--socket-type=tcp \
+--app-id=111 \
+--app-key=222 \
+--app-env=local \
+--collect-server-resources=false

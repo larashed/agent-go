@@ -47,7 +47,7 @@ func NewRunCommand(cfg *config.Config, apiClient api.Api, socketServer *socketse
 }
 
 func (d *RunCommand) Run() error {
-	log.Info().Msgf("Starting agent with version: %s", config.GitTag)
+	log.Info().Msgf("Starting agent v%s", config.GitTag)
 	log.Trace().Msgf("Config: %s", d.config.String())
 
 	cfg := monitoring.NewConfig(200, 10, 10)
@@ -63,11 +63,15 @@ func (d *RunCommand) Run() error {
 
 	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, cfg)
 
+	if d.config.CollectServerResources {
+		go d.runServerMetricCollector(serverMetricCollector)
+		go d.runServerMetricSender(metricSender)
+	} else {
+		log.Info().Msg("[Disabled] Server resource collection")
+	}
+
 	go d.runSocketServer(appMetricBucket)
 	go d.runAppMetricSender(metricSender)
-
-	go d.runServerMetricCollector(serverMetricCollector)
-	go d.runServerMetricSender(metricSender)
 
 	log.Info().Msgf("Agent running with PID %d", os.Getpid())
 	log.Info().Msgf("Socket address: %s://%s", d.config.SocketType, d.config.SocketAddress)
@@ -87,9 +91,12 @@ func (d *RunCommand) Run() error {
 func (d *RunCommand) Shutdown() {
 	log.Info().Msg("Stopping agent")
 
-	d.stopSenderServer <- struct{}{}
+	if d.config.CollectServerResources {
+		d.stopSenderServer <- struct{}{}
+		d.stopCollectorServer <- struct{}{}
+	}
+
 	d.stopSenderApp <- struct{}{}
-	d.stopCollectorServer <- struct{}{}
 	d.stopSocketServer <- struct{}{}
 
 	time.Sleep(100 * time.Millisecond)
@@ -107,7 +114,7 @@ func (d *RunCommand) runSocketServer(bucket *buckets.AppMetricBucket) {
 			log.Info().Msgf("Error stopping socket server: %s", err)
 		}
 
-		log.Info().Msg("Stopped socket service")
+		log.Info().Msg("Stopped socket server")
 	}()
 
 	handleSocketMessage := func(message string) {
@@ -120,7 +127,7 @@ func (d *RunCommand) runSocketServer(bucket *buckets.AppMetricBucket) {
 		bucket.Add(metrics.NewAppMetric(message))
 	}
 
-	log.Info().Msg("Starting socket service")
+	log.Info().Msg("Starting socket server")
 	if err := d.socketServer.Start(handleSocketMessage); err != socketserver.ErrServerStopped {
 		d.errorChan <- err
 	}

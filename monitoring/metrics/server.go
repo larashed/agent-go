@@ -21,7 +21,6 @@ type ServerLoad struct {
 }
 
 type ServerMetric struct {
-	Hostname             string     `json:"hostname"`
 	CPUUsedPercentage    float64    `json:"cpu_used_percentage"`
 	CPUCoreCount         int        `json:"cpu_core_count"`
 	Load                 ServerLoad `json:"load"`
@@ -30,8 +29,8 @@ type ServerMetric struct {
 	DiskTotal            uint64     `json:"disk_total"`
 	DiskUsedPercentage   float64    `json:"disk_used_percentage"`
 	CreatedAt            time.Time  `json:"-"`
-	Services             []Service  `json:"services"`
 	CreatedAtFormatted   string     `json:"created_at"`
+	Services             []Service  `json:"services"`
 }
 
 func (sm *ServerMetric) String() string {

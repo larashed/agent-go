@@ -45,6 +45,7 @@ func NewApp() *App {
 						cfg.AppEnvironment,
 						cfg.AppId,
 						cfg.AppKey,
+						cfg.Hostname,
 					)
 
 					server := socket_server.NewServer(cfg.SocketType, cfg.SocketAddress)
@@ -63,6 +64,7 @@ func NewApp() *App {
 					SysPathFlag,
 					HostnameFlag,
 					LoggingLevelFlag,
+					CollectServerResourcesFlag,
 				},
 			},
 			{
@@ -105,10 +107,19 @@ func newConfig(c *cli.Context) *config.Config {
 
 		SocketAddress: c.String(SocketAddressFlagName),
 		SocketType:    c.String(SocketTypeFlagName),
+
+		CollectServerResources: c.Bool(CollectServerResourcesFlagName),
 	}
 
 	if len(cfg.SocketAddress) == 0 {
 		cfg.SocketAddress = c.String(SocketAddressOldFlagName)
+	}
+
+	if len(cfg.Hostname) == 0 {
+		hostname, err := os.Hostname()
+		if err == nil {
+			cfg.Hostname = hostname
+		}
 	}
 
 	return cfg
@@ -128,5 +139,4 @@ func validateConfig(value, flag string) bool {
 func setEnvVariables(cfg *config.Config) {
 	os.Setenv("HOST_PROC", cfg.PathProcfs)
 	os.Setenv("HOST_SYS", cfg.PathSysfs)
-	os.Setenv("HOST_HOSTNAME", cfg.Hostname)
 }
