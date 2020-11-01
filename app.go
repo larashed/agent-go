@@ -40,13 +40,7 @@ func NewApp() *App {
 
 					log.Bootstrap(log.ParseLoggingLevel(cfg.LogLevel))
 
-					apiClient := api.NewClient(
-						cfg.ApiUrl,
-						cfg.AppEnvironment,
-						cfg.AppId,
-						cfg.AppKey,
-						cfg.Hostname,
-					)
+					apiClient := api.NewClient(cfg)
 
 					server := socket_server.NewServer(cfg.SocketType, cfg.SocketAddress)
 

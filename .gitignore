@@ -1,4 +1,5 @@
 build/
 bin/build_test
 bin/deploy
+bin/run_local
 signing/

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,12 +20,8 @@ type Api interface {
 }
 
 type Client struct {
-	url       string
-	apiKey    string
-	apiSecret string
-	env       string
-	hostname  string
-	client    http.Client
+	config *config.Config
+	client http.Client
 }
 
 type Response struct {
@@ -32,13 +29,9 @@ type Response struct {
 	Message string `json:"message"`
 }
 
-func NewClient(url, env, key, secret, hostname string) *Client {
+func NewClient(cfg *config.Config) *Client {
 	return &Client{
-		url:       url,
-		env:       env,
-		hostname:  hostname,
-		apiKey:    key,
-		apiSecret: secret,
+		config: cfg,
 		client: http.Client{
 			Timeout: time.Second * 10, // Maximum of 2 secs
 		},
@@ -56,7 +49,7 @@ func (c *Client) SendEnvironmentMetrics(data string) (*Response, error) {
 func (c *Client) doRequest(method, url string, data string) (*Response, error) {
 	req, err := http.NewRequest(
 		method,
-		strings.TrimRight(c.url, "/")+"/v1/"+url,
+		strings.TrimRight(c.config.ApiUrl, "/")+"/v1/"+url,
 		bytes.NewBuffer([]byte(data)),
 	)
 	if err != nil {
@@ -64,12 +57,13 @@ func (c *Client) doRequest(method, url string, data string) (*Response, error) {
 	}
 
 	req.Header.Set("User-Agent", "Larashed/Agent v1.0")
-	req.Header.Set("Larashed-Environment", c.env)
-	req.Header.Set("Larashed-Hostname", c.hostname)
+	req.Header.Set("Larashed-Environment", c.config.AppEnvironment)
+	req.Header.Set("Larashed-Hostname", c.config.Hostname)
+	req.Header.Set("Larashed-In-Docker", strconv.FormatBool(c.config.InDocker))
 	req.Header.Set("Larashed-Agent-Version", config.GitTag)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.SetBasicAuth(c.apiKey, c.apiSecret)
+	req.SetBasicAuth(c.config.AppId, c.config.AppKey)
 
 	res, err := c.client.Do(req)
 	if err != nil {
