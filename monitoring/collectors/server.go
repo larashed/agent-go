@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"encoding/json"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -103,6 +104,15 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 		if err == nil {
 			metric.Services = s
 		}
+
+		c, err := smc.DockerContainers()
+		if err != nil {
+			log.Trace().Err(err)
+		}
+
+		if err == nil {
+			metric.Containers = c
+		}
 	}
 
 	metric.CreatedAt = time.Now()
@@ -157,6 +167,34 @@ func (smc *ServerMetricCollector) Load() (*metrics.ServerLoad, error) {
 		Load5:  avg.Load5,
 		Load15: avg.Load15,
 	}, nil
+}
+
+func (smc *ServerMetricCollector) DockerContainers() (containers []metrics.Container, err error) {
+	dockerPath, err := exec.LookPath("docker")
+	if err != nil {
+		return containers, err
+	}
+
+	cmd := exec.Command(dockerPath, "stats", "--no-stream", "--format", "{{ json . }}")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return containers, err
+	}
+
+	list := strings.Split(
+		strings.TrimSpace(string(output)),
+		"\n",
+	)
+	for i := 0; i < len(list); i++ {
+		dto := &metrics.DockerStatsDto{}
+
+		err := json.Unmarshal([]byte(list[i]), dto)
+		if err == nil {
+			containers = append(containers, *dto.ToContainer())
+		}
+	}
+
+	return containers, nil
 }
 
 func (smc *ServerMetricCollector) Services() (services []metrics.Service, err error) {

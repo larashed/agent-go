@@ -29,6 +29,7 @@ func AggregateServerMetrics(metrics []*ServerMetric) *ServerMetric {
 	metric.CPUCoreCount = lastMetric.CPUCoreCount
 	metric.CreatedAt = lastMetric.CreatedAt
 	metric.Services = lastMetric.Services
+	metric.Containers = lastMetric.Containers
 
 	metric.MemoryTotal = lastMetric.MemoryTotal
 	metric.MemoryUserPercentage = round(mem / float64(length))

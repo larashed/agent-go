@@ -10,4 +10,4 @@ run --log-level=trace \
 --app-id=111 \
 --app-key=222 \
 --app-env=local \
---collect-server-resources=false
+--collect-server-resources=true
