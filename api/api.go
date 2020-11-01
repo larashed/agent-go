@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/larashed/agent-go/config"
 )
 
 type Api interface {
@@ -64,6 +66,7 @@ func (c *Client) doRequest(method, url string, data string) (*Response, error) {
 	req.Header.Set("User-Agent", "Larashed/Agent v1.0")
 	req.Header.Set("Larashed-Environment", c.env)
 	req.Header.Set("Larashed-Hostname", c.hostname)
+	req.Header.Set("Larashed-Agent-Version", config.GitTag)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.SetBasicAuth(c.apiKey, c.apiSecret)
