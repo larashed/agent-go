@@ -7,29 +7,31 @@ import (
 	"github.com/larashed/agent-go/monitoring/metrics"
 )
 
-type Metrics []metrics.AppMetric
-
+// AppMetricBucket holds application metrics
 type AppMetricBucket struct {
-	metrics Metrics
+	metrics []metrics.AppMetric
 	mutex   sync.RWMutex
 	Channel chan int
 }
 
+// NewAppMetricBucket creates a new `AppMetricBucket` instance
 func NewAppMetricBucket() *AppMetricBucket {
 	return &AppMetricBucket{
-		metrics: make(Metrics, 0),
+		metrics: make([]metrics.AppMetric, 0),
 		mutex:   sync.RWMutex{},
 		Channel: make(chan int),
 	}
 }
 
-func NewBucketFromItems(items Metrics) *AppMetricBucket {
+// NewBucketFromItems creates a new `AppMetricBucket` instance with given metrics
+func NewBucketFromItems(items []metrics.AppMetric) *AppMetricBucket {
 	return &AppMetricBucket{
 		metrics: items,
 		mutex:   sync.RWMutex{},
 	}
 }
 
+// Merge buckets together
 func (b *AppMetricBucket) Merge(bucket *AppMetricBucket) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
@@ -37,6 +39,7 @@ func (b *AppMetricBucket) Merge(bucket *AppMetricBucket) {
 	b.metrics = append(b.metrics, *bucket.All()...)
 }
 
+// Add a metric to the bucket
 func (b *AppMetricBucket) Add(record *metrics.AppMetric) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
@@ -48,13 +51,15 @@ func (b *AppMetricBucket) Add(record *metrics.AppMetric) {
 	b.metrics = append(b.metrics, *record)
 }
 
-func (b *AppMetricBucket) All() *Metrics {
+// All returns all metrics
+func (b *AppMetricBucket) All() *[]metrics.AppMetric {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
 	return &b.metrics
 }
 
+// Count the number of metrics in the bucket
 func (b *AppMetricBucket) Count() int {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
@@ -62,6 +67,7 @@ func (b *AppMetricBucket) Count() int {
 	return len(b.metrics)
 }
 
+// Extract a limited amount of records from the bucket
 func (b *AppMetricBucket) Extract(limit int) *AppMetricBucket {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
@@ -71,10 +77,10 @@ func (b *AppMetricBucket) Extract(limit int) *AppMetricBucket {
 		limit = count
 	}
 
-	newBucketItems := make(Metrics, 0)
+	newBucketItems := make([]metrics.AppMetric, 0)
 	newBucketItems = append(newBucketItems, b.metrics[:limit]...)
 
-	b.metrics = append(make(Metrics, 0), b.metrics[count:]...)
+	b.metrics = append(make([]metrics.AppMetric, 0), b.metrics[count:]...)
 
 	return NewBucketFromItems(newBucketItems)
 }

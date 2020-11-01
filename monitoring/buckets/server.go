@@ -7,14 +7,17 @@ import (
 	"github.com/larashed/agent-go/monitoring/metrics"
 )
 
+// ServerMetrics holds server metrics grouped by minute
 type ServerMetrics map[int][]*metrics.ServerMetric
 
+// ServerMetricBucket holds server metrics
 type ServerMetricBucket struct {
 	metrics ServerMetrics
 	mutex   sync.RWMutex
 	Channel chan int
 }
 
+// NewServerMetricBucket returns a new instance of `ServerMetricBucket`
 func NewServerMetricBucket() *ServerMetricBucket {
 	return &ServerMetricBucket{
 		metrics: make(ServerMetrics, 0),
@@ -23,6 +26,7 @@ func NewServerMetricBucket() *ServerMetricBucket {
 	}
 }
 
+// Add a server metric to the bucket
 func (s *ServerMetricBucket) Add(record *metrics.ServerMetric) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -37,6 +41,7 @@ func (s *ServerMetricBucket) Add(record *metrics.ServerMetric) {
 	s.metrics[t] = append(s.metrics[t], record)
 }
 
+// Metrics returns server metrics for a selected minute
 func (s *ServerMetricBucket) Metrics(minute int) []*metrics.ServerMetric {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -44,6 +49,7 @@ func (s *ServerMetricBucket) Metrics(minute int) []*metrics.ServerMetric {
 	return s.metrics[minute]
 }
 
+// Minutes returns all minutes with collected metrics
 func (s *ServerMetricBucket) Minutes() []int {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -58,13 +64,7 @@ func (s *ServerMetricBucket) Minutes() []int {
 	return keys
 }
 
+// Remove a minute with its metrics
 func (s *ServerMetricBucket) Remove(minute int) {
 	delete(s.metrics, minute)
-}
-
-func (s *ServerMetricBucket) Count() int {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	return len(s.metrics)
 }

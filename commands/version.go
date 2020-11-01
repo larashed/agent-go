@@ -7,13 +7,14 @@ import (
 	"github.com/larashed/agent-go/config"
 )
 
-func NewVersionCommand(isJson bool) {
+// NewVersionCommand prints agent version
+func NewVersionCommand(isJSON bool) {
 	v := config.Version{
 		Tag:    config.GitTag,
 		Commit: config.GitCommit,
 	}
 
-	if isJson {
+	if isJSON {
 		j, _ := json.Marshal(v)
 		fmt.Println(string(j))
 		return

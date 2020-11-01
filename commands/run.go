@@ -20,6 +20,7 @@ import (
 	socketserver "github.com/larashed/agent-go/server"
 )
 
+// RunCommand defines the agent's run command
 type RunCommand struct {
 	config       *config.Config
 	api          api.Api
@@ -32,6 +33,7 @@ type RunCommand struct {
 	errorChan           chan error
 }
 
+// NewRunCommand creates an instance of `RunCommand`
 func NewRunCommand(cfg *config.Config, apiClient api.Api, socketServer *socketserver.Server) *RunCommand {
 	return &RunCommand{
 		config:       cfg,
@@ -46,6 +48,7 @@ func NewRunCommand(cfg *config.Config, apiClient api.Api, socketServer *socketse
 	}
 }
 
+// Run starts the agent
 func (d *RunCommand) Run() error {
 	log.Info().Msgf("Starting agent v%s", config.GitTag)
 	log.Trace().Msgf("Config: %s", d.config.String())
@@ -88,6 +91,7 @@ func (d *RunCommand) Run() error {
 	}
 }
 
+// Shutdown stops the agent
 func (d *RunCommand) Shutdown() {
 	log.Info().Msg("Stopping agent")
 

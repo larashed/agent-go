@@ -12,6 +12,7 @@ import (
 	"github.com/larashed/agent-go/monitoring/metrics"
 )
 
+// Sender defines a metric sender
 type Sender struct {
 	api api.Api
 
@@ -27,6 +28,7 @@ type Sender struct {
 	stopAppMetricSend    chan int
 }
 
+// NewSender creates an instance of `Sender`
 func NewSender(
 	api api.Api,
 	appMetricBucket *buckets.AppMetricBucket,
@@ -44,15 +46,18 @@ func NewSender(
 	}
 }
 
+// StopSendingServerMetrics stops sending server metrics
 func (s *Sender) StopSendingServerMetrics() {
 	s.stopServerMetricSend <- 1
 }
 
+// StopSendingAppMetrics stops sending app metrics
 func (s *Sender) StopSendingAppMetrics() {
 	s.stopAppMetricSend <- 1
 	s.stopAppMetricSend <- 1
 }
 
+// SendServerMetrics sends collected server metrics
 func (s *Sender) SendServerMetrics() {
 	go func() {
 		for {
@@ -66,6 +71,7 @@ func (s *Sender) SendServerMetrics() {
 	}()
 }
 
+// SendAppMetrics sends collected app metrics
 func (s *Sender) SendAppMetrics() {
 	go func() {
 		for {

@@ -18,6 +18,7 @@ const (
 
 const timeFormat = "2006-01-02T15:04:05.999999999"
 
+// Bootstrap logging
 func Bootstrap(level zerolog.Level) {
 	zerolog.SetGlobalLevel(level)
 	zerolog.TimeFieldFormat = timeFormat
@@ -41,6 +42,7 @@ func Bootstrap(level zerolog.Level) {
 	log.Logger = zerolog.New(console).With().Caller().Timestamp().Logger()
 }
 
+// ParseLoggingLevel maps internal log level to zerolog's log level
 func ParseLoggingLevel(level string) zerolog.Level {
 	switch level {
 	case levelDebug:

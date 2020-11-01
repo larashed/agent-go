@@ -9,13 +9,15 @@ import (
 	"github.com/larashed/agent-go/commands"
 	"github.com/larashed/agent-go/config"
 	"github.com/larashed/agent-go/log"
-	socket_server "github.com/larashed/agent-go/server"
+	socketserver "github.com/larashed/agent-go/server"
 )
 
+// App holds agent CLI app
 type App struct {
 	app *cli.App
 }
 
+// NewApp creates a new `App` instance
 func NewApp() *App {
 	app := &cli.App{
 		Name:        "Larashed",
@@ -32,7 +34,7 @@ func NewApp() *App {
 
 					// validate required flags and output error message with help
 					if !validateConfig(cfg.SocketAddress, SocketAddressFlagName) ||
-						!validateConfig(cfg.AppId, AppIdFlagName) ||
+						!validateConfig(cfg.AppId, AppIDFlagName) ||
 						!validateConfig(cfg.AppKey, AppKeyFlagName) ||
 						!validateConfig(cfg.AppEnvironment, AppEnvFlagName) {
 						return cli.ShowCommandHelp(c, "run")
@@ -42,7 +44,7 @@ func NewApp() *App {
 
 					apiClient := api.NewClient(cfg)
 
-					server := socket_server.NewServer(cfg.SocketType, cfg.SocketAddress)
+					server := socketserver.NewServer(cfg.SocketType, cfg.SocketAddress)
 
 					return commands.NewRunCommand(cfg, apiClient, server).Run()
 				},
@@ -52,7 +54,7 @@ func NewApp() *App {
 					OldSocketAddressFlag,
 					ApiUrlFlag,
 					AppEnvFlag,
-					AppIdFlag,
+					AppIDFlag,
 					AppKeyFlag,
 					ProcPathFlag,
 					SysPathFlag,
@@ -65,12 +67,12 @@ func NewApp() *App {
 				Name:  "version",
 				Usage: "print agent version",
 				Action: func(c *cli.Context) error {
-					commands.NewVersionCommand(c.Bool(JsonFlagName))
+					commands.NewVersionCommand(c.Bool(JSONFlagName))
 
 					return nil
 				},
 				Flags: []cli.Flag{
-					JsonFlag,
+					JSONFlag,
 				},
 			},
 		},
@@ -79,13 +81,14 @@ func NewApp() *App {
 	return &App{app}
 }
 
+// Run CLI app with arguments
 func (a *App) Run() error {
 	return a.app.Run(os.Args)
 }
 
 func newConfig(c *cli.Context) *config.Config {
 	cfg := &config.Config{
-		ApiUrl: c.String(ApiURLFlagName),
+		ApiUrl: c.String(ApiUrlFlagName),
 
 		PathProcfs: c.String(ProcPathFlagName),
 		PathSysfs:  c.String(SysPathFlagName),
@@ -96,7 +99,7 @@ func newConfig(c *cli.Context) *config.Config {
 		LogLevel: c.String(LoggingLevelFlagName),
 
 		AppEnvironment: c.String(AppEnvFlagName),
-		AppId:          c.String(AppIdFlagName),
+		AppId:          c.String(AppIDFlagName),
 		AppKey:         c.String(AppKeyFlagName),
 
 		SocketAddress: c.String(SocketAddressFlagName),
@@ -131,6 +134,6 @@ func validateConfig(value, flag string) bool {
 
 // used by github.com/shirou/gopsutil and internal code
 func setEnvVariables(cfg *config.Config) {
-	os.Setenv("HOST_PROC", cfg.PathProcfs)
-	os.Setenv("HOST_SYS", cfg.PathSysfs)
+	var _ = os.Setenv("HOST_PROC", cfg.PathProcfs)
+	_ = os.Setenv("HOST_SYS", cfg.PathSysfs)
 }

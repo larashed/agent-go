@@ -12,8 +12,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+// DataHandler incoming data handler
 type DataHandler func(string)
 
+// Server holds socket server structure
 type Server struct {
 	socketType    string
 	socketAddress string
@@ -21,6 +23,7 @@ type Server struct {
 	listenerStop  chan struct{}
 }
 
+// NewServer creates a new `Server` instance
 func NewServer(networkType, networkAddress string) *Server {
 	return &Server{
 		socketType:    networkType,
@@ -90,6 +93,7 @@ func (s *Server) handleData(c net.Conn, handler DataHandler) {
 	handler(strings.TrimSpace(line))
 }
 
+// Stop socket server
 func (s *Server) Stop() error {
 	close(s.listenerStop)
 	return s.listener.Close()

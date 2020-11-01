@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/bytefmt"
 )
 
+// DockerStatsDto holds `docker stats` command JSON DTO
 type DockerStatsDto struct {
 	BlockIO   string `json:"BlockIO"`
 	CPUPerc   string `json:"CPUPerc"`
@@ -19,6 +20,7 @@ type DockerStatsDto struct {
 	PIDs      string `json:"PIDs"`
 }
 
+// Container defines container data
 type Container struct {
 	Name                 string  `json:"name"`
 	ID                   string  `json:"id"`
@@ -27,6 +29,7 @@ type Container struct {
 	MemoryUserPercentage float64 `json:"memory_used_percentage"`
 }
 
+// ToContainer map `docker stats` DTO to internal `Container` type
 func (dto *DockerStatsDto) ToContainer() *Container {
 	c := &Container{
 		ID:                   dto.ID,

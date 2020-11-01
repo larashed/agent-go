@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	ApiURLFlagName           = "api-url"
+	ApiUrlFlagName           = "api-url" //nolint:golint
 	AppEnvFlagName           = "env"
-	AppIdFlagName            = "app-id"
+	AppIDFlagName            = "app-id"
 	AppKeyFlagName           = "app-key"
 	SocketAddressOldFlagName = "socket"
 	SocketTypeFlagName       = "socket-type"
@@ -15,15 +15,15 @@ const (
 	ProcPathFlagName         = "path-proc"
 	SysPathFlagName          = "path-sys"
 	HostnameFlagName         = "hostname"
-	JsonFlagName             = "json"
+	JSONFlagName             = "json"
 	LoggingLevelFlagName     = "log-level"
 
 	CollectServerResourcesFlagName = "collect-server-resources"
 )
 
 var (
-	ApiUrlFlag = &cli.StringFlag{
-		Name:  ApiURLFlagName,
+	ApiUrlFlag = &cli.StringFlag{ //nolint:golint
+		Name:  ApiUrlFlagName,
 		Usage: "Larashed API URL",
 		Value: "https://api.larashed.com/",
 	}
@@ -32,8 +32,8 @@ var (
 		Aliases: []string{"app-env"},
 		Usage:   "Application's environment name",
 	}
-	AppIdFlag = &cli.StringFlag{
-		Name:  AppIdFlagName,
+	AppIDFlag = &cli.StringFlag{
+		Name:  AppIDFlagName,
 		Usage: "Your application's ID",
 	}
 	AppKeyFlag = &cli.StringFlag{
@@ -72,8 +72,8 @@ var (
 		Name:  HostnameFlagName,
 		Usage: "Hostname",
 	}
-	JsonFlag = &cli.BoolFlag{
-		Name:  JsonFlagName,
+	JSONFlag = &cli.BoolFlag{
+		Name:  JSONFlagName,
 		Usage: "Output JSON",
 	}
 	CollectServerResourcesFlag = &cli.BoolFlag{

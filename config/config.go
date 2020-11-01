@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 )
 
+// Config holds agent configuration
 type Config struct {
-	ApiUrl         string
+	ApiUrl         string //nolint:golint
 	AppEnvironment string
-	AppId          string
+	AppId          string //nolint:golint
 	AppKey         string
 	InDocker       bool
 	Hostname       string

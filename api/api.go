@@ -13,22 +13,26 @@ import (
 	"github.com/larashed/agent-go/config"
 )
 
-type Api interface {
+// Api client interface
+type Api interface { //nolint:golint
 	SendServerMetrics(data string) (*Response, error)
 	SendEnvironmentMetrics(data string) (*Response, error)
 	//SendDeployment(data string) (*Response, error)
 }
 
+// Client holds the API Client
 type Client struct {
 	config *config.Config
 	client http.Client
 }
 
+// Response object structure
 type Response struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
 
+// NewClient creates a new instance of `Client`
 func NewClient(cfg *config.Config) *Client {
 	return &Client{
 		config: cfg,
@@ -38,10 +42,12 @@ func NewClient(cfg *config.Config) *Client {
 	}
 }
 
+// SendServerMetrics sends collected server metrics to our API
 func (c *Client) SendServerMetrics(data string) (*Response, error) {
 	return c.doRequest("POST", "agent/server/metrics", data)
 }
 
+// SendEnvironmentMetrics sends collected app metrics to our API
 func (c *Client) SendEnvironmentMetrics(data string) (*Response, error) {
 	return c.doRequest("POST", "agent/environment/metrics", data)
 }

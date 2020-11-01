@@ -18,6 +18,7 @@ import (
 	"github.com/larashed/agent-go/monitoring/metrics"
 )
 
+// ServerMetricCollector defines a server resource collector
 type ServerMetricCollector struct {
 	inDocker          bool
 	bucket            *buckets.ServerMetricBucket
@@ -25,6 +26,7 @@ type ServerMetricCollector struct {
 	stop              chan int
 }
 
+// NewServerMetricCollector creates a new instance of `ServerMetricCollector`
 func NewServerMetricCollector(
 	bucket *buckets.ServerMetricBucket,
 	intervalInSeconds int,
@@ -37,6 +39,7 @@ func NewServerMetricCollector(
 	}
 }
 
+// Start server metric collection
 func (smc *ServerMetricCollector) Start() {
 	ticker := time.NewTicker(time.Duration(smc.intervalInSeconds) * time.Second)
 	defer ticker.Stop()
@@ -65,6 +68,7 @@ func (smc *ServerMetricCollector) Start() {
 	}
 }
 
+// Stop server metric collection
 func (smc *ServerMetricCollector) Stop() {
 	smc.stop <- 1
 }
@@ -72,40 +76,40 @@ func (smc *ServerMetricCollector) Stop() {
 func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, error) {
 	metric := &metrics.ServerMetric{}
 
-	cp, err := smc.CPU()
+	cp, err := smc.cpu()
 	if err == nil {
 		metric.CPUUsedPercentage = cp
 	}
 
-	cc, err := smc.CPUCoreCount()
+	cc, err := smc.processorCoreCount()
 	if err == nil {
 		metric.CPUCoreCount = cc
 	}
 
-	m, err := smc.Memory()
+	m, err := smc.memory()
 	if err == nil {
 		metric.MemoryTotal = m.Total
 		metric.MemoryUserPercentage = m.UsedPercent
 	}
 
-	l, err := smc.Load()
+	l, err := smc.load()
 	if err == nil {
 		metric.Load = *l
 	}
 
-	d, err := smc.Disk()
+	d, err := smc.disk()
 	if err == nil {
 		metric.DiskTotal = d.Total
 		metric.DiskUsedPercentage = d.UsedPercent
 	}
 
 	if !smc.inDocker {
-		s, err := smc.Services()
+		s, err := smc.services()
 		if err == nil {
 			metric.Services = s
 		}
 
-		c, err := smc.DockerContainers()
+		c, err := smc.dockerContainers()
 		if err != nil {
 			log.Trace().Err(err)
 		}
@@ -120,7 +124,7 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 	return metric, err
 }
 
-func (smc *ServerMetricCollector) CPUCoreCount() (int, error) {
+func (smc *ServerMetricCollector) processorCoreCount() (int, error) {
 	count, err := cpu.Counts(false)
 	if err != nil {
 		return 0, err
@@ -129,7 +133,7 @@ func (smc *ServerMetricCollector) CPUCoreCount() (int, error) {
 	return count, nil
 }
 
-func (smc *ServerMetricCollector) CPU() (float64, error) {
+func (smc *ServerMetricCollector) cpu() (float64, error) {
 	percentages, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		return 0, err
@@ -138,7 +142,7 @@ func (smc *ServerMetricCollector) CPU() (float64, error) {
 	return percentages[0], nil
 }
 
-func (smc *ServerMetricCollector) Memory() (*mem.VirtualMemoryStat, error) {
+func (smc *ServerMetricCollector) memory() (*mem.VirtualMemoryStat, error) {
 	m, err := mem.VirtualMemory()
 	if err != nil {
 		return nil, err
@@ -147,7 +151,7 @@ func (smc *ServerMetricCollector) Memory() (*mem.VirtualMemoryStat, error) {
 	return m, nil
 }
 
-func (smc *ServerMetricCollector) Disk() (*disk.UsageStat, error) {
+func (smc *ServerMetricCollector) disk() (*disk.UsageStat, error) {
 	m, err := disk.Usage("/")
 	if err != nil {
 		return nil, err
@@ -156,7 +160,7 @@ func (smc *ServerMetricCollector) Disk() (*disk.UsageStat, error) {
 	return m, nil
 }
 
-func (smc *ServerMetricCollector) Load() (*metrics.ServerLoad, error) {
+func (smc *ServerMetricCollector) load() (*metrics.ServerLoad, error) {
 	avg, err := load.Avg()
 	if err != nil {
 		return nil, err
@@ -169,7 +173,7 @@ func (smc *ServerMetricCollector) Load() (*metrics.ServerLoad, error) {
 	}, nil
 }
 
-func (smc *ServerMetricCollector) DockerContainers() (containers []metrics.Container, err error) {
+func (smc *ServerMetricCollector) dockerContainers() (containers []metrics.Container, err error) {
 	dockerPath, err := exec.LookPath("docker")
 	if err != nil {
 		return containers, err
@@ -197,7 +201,7 @@ func (smc *ServerMetricCollector) DockerContainers() (containers []metrics.Conta
 	return containers, nil
 }
 
-func (smc *ServerMetricCollector) Services() (services []metrics.Service, err error) {
+func (smc *ServerMetricCollector) services() (services []metrics.Service, err error) {
 	cmd := exec.Command("service", "--status-all")
 	output, err := cmd.CombinedOutput()
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"math"
 )
 
+// AggregateServerMetrics aggregates collected server metrics into a single metric
 func AggregateServerMetrics(metrics []*ServerMetric) *ServerMetric {
 	var mem = 0.0
 	var disk = 0.0
