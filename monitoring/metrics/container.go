@@ -24,6 +24,7 @@ type DockerStatsDto struct {
 type Container struct {
 	Name                 string  `json:"name"`
 	ID                   string  `json:"id"`
+	Type                 string  `json:"type"`
 	CPUUsedPercentage    float64 `json:"cpu_used_percentage"`
 	MemoryTotal          uint64  `json:"memory_total"`
 	MemoryUserPercentage float64 `json:"memory_used_percentage"`
@@ -37,6 +38,7 @@ func (dto *DockerStatsDto) ToContainer() *Container {
 		CPUUsedPercentage:    0,
 		MemoryTotal:          0,
 		MemoryUserPercentage: 0,
+		Type:                 "docker",
 	}
 
 	if s, err := strconv.ParseFloat(strings.Replace(dto.CPUPerc, "%", "", 1), 64); err == nil {
