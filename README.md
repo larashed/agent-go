@@ -7,6 +7,13 @@ Larashed Go Agent
 Larashed Go agent starts a socket server and collects metrics from your server and Laravel application.
 These metrics are then sent to [larashed.com](https://larashed.com/).
 
+## Collected metrics
+- Server load 
+- CPU usage
+- Memory usage
+- Disk space usage
+- Docker container metrics
+
 ## IPC Communication
 
 There are 2 supported communication types: TCP and Unix domain socket.
@@ -65,20 +72,20 @@ agent_linux_amd64 run \
 ### Docker
 
 You can run our agent as a Docker container.
-Check out our images on [Docker hub](https://hub.docker.com/r/larashed/agent/tags).
 
-**Note:** you will have to mount host `/proc` and `/sys` directories to `/host` container directory for host machine
- resource monitoring to work.
+> We recommend you disable container OS resource monitoring using the `--collect-server-resources=false` flag and use
+> the agent container to collect application metrics only. **To monitor your container resource usage, install the
+> monitoring agent on the host machine.**
 
 To start the latest tagged image, run:
 ```
-docker run -it -v /proc:/host/proc:ro \
-    -v /sys:/host/sys:ro \
+docker run -it \
     larashed/agent:latest \
     --app-id=xxxxx \
     --app-key=xxxxx \
     --app-env=production \
     --socket-type=tcp \
+    --collect-server-resources=false \
     --socket-address=0.0.0.0:33101 \
     --hostname=`hostname`
 ```
@@ -97,7 +104,24 @@ agent:
     - "--app-env=production"
     - "--socket-type=tcp"
     - "--socket-address=0.0.0.0:33101"
+    - "--collect-server-resources=false"
     - "--hostname=your_hostname"
+```
+
+---
+While not recommended, you can monitor basic host machine metrics by mounting your 
+`/proc` and `/sys` directories to `/host` container directory.
+
+Docker run:
+```
+docker run -it \
+    ...
+    -v /proc:/host/proc:ro \
+    -v /sys:/host/sys:ro
+```
+
+Docker compose:
+```
   volumes:
     - "/proc:/host/proc:ro"
     - "/sys:/host/sys:ro"
