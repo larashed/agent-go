@@ -122,6 +122,7 @@ print_help() {
     print_white '$LARASHED_APP_ENV'
     print_white '$LARASHED_SOCKET_TYPE'
     print_white '$LARASHED_SOCKET_ADDRESS'
+    print_white '$LARASHED_ADDITIONAL_ARGUMENTS'
 
 }
 
@@ -286,6 +287,7 @@ generate_config() {
     if [ -z "$LARASHED_APP_ENV" ]; then LARASHED_APP_ENV="production"; fi
     if [ -z "$LARASHED_SOCKET_TYPE" ]; then LARASHED_SOCKET_TYPE="tcp"; fi
     if [ -z "$LARASHED_SOCKET_ADDRESS" ]; then LARASHED_SOCKET_ADDRESS="0.0.0.0:33101"; fi
+    if [ -z "$LARASHED_ADDITIONAL_ARGUMENTS" ]; then LARASHED_ADDITIONAL_ARGUMENTS=""; fi
 
     # generate config
     echo "APP_ID=$LARASHED_APP_ID" > "$DESTINATION_PATH" || { print_error "Error creating config file: $CONFIG_FOLDER/$CONFIG_FILE"; return 1; }
@@ -293,9 +295,10 @@ generate_config() {
     echo "APP_ENV=$LARASHED_APP_ENV" >> "$DESTINATION_PATH"
     echo "SOCKET_TYPE=$LARASHED_SOCKET_TYPE" >> "$DESTINATION_PATH"
     echo "SOCKET_ADDRESS=$LARASHED_SOCKET_ADDRESS" >> "$DESTINATION_PATH"
+    echo "ADDITIONAL_ARGUMENTS=$LARASHED_ADDITIONAL_ARGUMENTS" >> "$DESTINATION_PATH"
 
     if $VERBOSE; then
-        print_yellow "Sucesfully created config in $DESTINATION_PATH"
+        print_yellow "Successfully created config in $DESTINATION_PATH"
     fi
 }
 
@@ -309,6 +312,7 @@ install_systemd_unit() {
     RUN_ARGS="$RUN_ARGS --app-env=\"\${APP_ENV}\""
     RUN_ARGS="$RUN_ARGS --socket-type=\"\${SOCKET_TYPE}\""
     RUN_ARGS="$RUN_ARGS --socket-address=\"\${SOCKET_ADDRESS}\""
+    RUN_ARGS="$RUN_ARGS \"\${ADDITIONAL_ARGUMENTS}\""
 
     ## build systemd unit
     # build unit part
@@ -411,17 +415,7 @@ install_agent() {
 
     # check if config-folder is already in place
     if [ -f "$CONFIG_FOLDER/$CONFIG_FILE" ]; then
-        print_yellow "Config file already present! Do you want to overwrite it with the current version?"
-        print_prompt "If answering yes, your current settings in $CONFIG_FILE will be revoked [y|N]"
-        read -r continue_var
-        if [ "$continue_var" = "y" ]; then
-            generate_config "$CONFIG_FOLDER/$CONFIG_FILE" || { print_error "Error generating config."; return 1; }
-            if $VERBOSE; then
-                print_yellow "Generated new config in $CONFIG_FOLDER/$CONFIG_FILE"
-            fi
-        else
-            return 1
-        fi
+        print_yellow "Config file already present! Keeping the current version."
     # else, write config
     else
         generate_config "$CONFIG_FOLDER/$CONFIG_FILE" || { print_error "Error generating config."; return 1; }
@@ -469,25 +463,25 @@ uninstall_agent() {
     if ps -auxwe | grep -v "grep" | grep "$BINARY_DESTINATION"; then
         PID=$(ps -auxwe | grep -v "grep" | grep "$BINARY_DESTINATION" | tr -s ' ' | cut -d' ' -f2)
         timeout "$SYSTEMD_TIMEOUT" kill -15 "$PID" || kill -9 "$PID"
-        print_yellow "WARN: Killed still running binary $BINARY_DESTINATION with PID $PID"
+        print_yellow "WARN: Killed still running binary $BINARY_DESTINATION with PID $PID."
         CHANGES_MADE=1
     elif !(ps -auxwe | grep -v "grep" | grep "$BINARY_DESTINATION") && $VERBOSE; then
-        print_green "OK: All process already quit, no additional killing needed."
+        print_green "OK: All agent processes are stopped."
     fi
 
     # if present, remove binary
     if [ -f "$BINARY_DESTINATION" ]; then
         rm -f "$BINARY_DESTINATION" || { print_error "Error deleting $BINARY_DESTINATION" ; return 1; }
-        print_green "OK: Removed binary from $BINARY_DESTINATION"
+        print_green "OK: Removed binary from $BINARY_DESTINATION."
         CHANGES_MADE=1
     elif !([ -f "$BINARY_DESTINATION" ]) && $VERBOSE; then
-        print_yellow "WARN: Found no binary to delete"
+        print_yellow "WARN: Found no binary to delete."
     fi
 
     # if present, remove config folder
     if [ -d "$CONFIG_FOLDER" ]; then
         rm -rf "$CONFIG_FOLDER" || { print_error "Error deleting $CONFIG_FOLDER" ; return 1; }
-        print_green "OK: Removed $CONFIG_FOLDER"
+        print_green "OK: Removed $CONFIG_FOLDER."
         CHANGES_MADE=1
     elif !([ -d "$CONFIG_FOLDER" ]) && $VERBOSE; then
         print_yellow "WARN: Found no config-folder to delete."
@@ -496,10 +490,10 @@ uninstall_agent() {
     # check if user exists and remove
     if getent passwd "$UNIX_USERNAME" > /dev/null 2>&1; then
         /usr/sbin/userdel "$UNIX_USERNAME" || { print_error "Error deleting user $UNIX_USERNAME" ; return 1; }
-        print_green "OK: Removed user $UNIX_USERNAME "
+        print_green "OK: Removed user $UNIX_USERNAME."
         CHANGES_MADE=1
     elif !(getent passwd "$UNIX_USERNAME") && $VERBOSE; then
-        print_yellow "WARN: Found no user to delete"
+        print_yellow "WARN: Found no user to delete."
     fi
 
     # remove sudo-entry

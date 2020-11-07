@@ -41,6 +41,7 @@ The following environment variables will be read if present:
 - `LARASHED_APP_ENV`
 - `LARASHED_SOCKET_TYPE`
 - `LARASHED_SOCKET_ADDRESS`
+- `LARASHED_ADDITIONAL_ARGUMENTS`
 
 Agent configuration will be stored in `/etc/larashed/larashed.conf`.
 
