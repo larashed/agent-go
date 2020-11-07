@@ -27,6 +27,12 @@ type ServerLoad struct {
 	Load15 float64 `json:"load15"`
 }
 
+// OS represents the underlying OS information
+type OS struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 // ServerMetric represents a server metric
 type ServerMetric struct {
 	CPUUsedPercentage    float64     `json:"cpu_used_percentage"`
@@ -38,8 +44,12 @@ type ServerMetric struct {
 	DiskUsedPercentage   float64     `json:"disk_used_percentage"`
 	CreatedAt            time.Time   `json:"-"`
 	CreatedAtFormatted   string      `json:"created_at"`
+	OS                   *OS         `json:"os"`
+	BootTime             uint64      `json:"boot_time"`
+	RebootRequired       bool        `json:"reboot_required"`
 	Services             []Service   `json:"services"`
 	Containers           []Container `json:"containers"`
+	PHPVersion           string      `json:"php_version"`
 }
 
 // String returns `ServerMetric` in a string format

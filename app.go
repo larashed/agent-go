@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/shirou/gopsutil/host"
 	"github.com/urfave/cli/v2"
 
 	"github.com/larashed/agent-go/api"
@@ -113,9 +114,9 @@ func newConfig(c *cli.Context) *config.Config {
 	}
 
 	if len(cfg.Hostname) == 0 {
-		hostname, err := os.Hostname()
+		hostname, err := host.Info()
 		if err == nil {
-			cfg.Hostname = hostname
+			cfg.Hostname = hostname.Hostname
 		}
 	}
 
@@ -134,6 +135,6 @@ func validateConfig(value, flag string) bool {
 
 // used by github.com/shirou/gopsutil and internal code
 func setEnvVariables(cfg *config.Config) {
-	var _ = os.Setenv("HOST_PROC", cfg.PathProcfs)
+	_ = os.Setenv("HOST_PROC", cfg.PathProcfs)
 	_ = os.Setenv("HOST_SYS", cfg.PathSysfs)
 }

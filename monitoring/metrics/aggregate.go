@@ -31,6 +31,10 @@ func AggregateServerMetrics(metrics []*ServerMetric) *ServerMetric {
 	metric.CreatedAt = lastMetric.CreatedAt
 	metric.Services = lastMetric.Services
 	metric.Containers = lastMetric.Containers
+	metric.OS = lastMetric.OS
+	metric.BootTime = lastMetric.BootTime
+	metric.RebootRequired = lastMetric.RebootRequired
+	metric.PHPVersion = lastMetric.PHPVersion
 
 	metric.MemoryTotal = lastMetric.MemoryTotal
 	metric.MemoryUserPercentage = round(mem / float64(length))

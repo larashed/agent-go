@@ -175,7 +175,7 @@ func (s *Sender) sendAppMetrics() {
 		Str("metric", "app").
 		Msg("sending app metrics")
 
-	_, err := s.api.SendEnvironmentMetrics(bucket.String())
+	_, err := s.api.SendAppMetrics(bucket.String())
 	if err != nil {
 		log.Error().Msg("failed to send app metrics: " + err.Error())
 		log.Debug().Msg("sleeping before adding back the metrics to the app bucket")

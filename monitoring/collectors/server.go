@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"encoding/json"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
 
@@ -74,7 +76,9 @@ func (smc *ServerMetricCollector) Stop() {
 }
 
 func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, error) {
-	metric := &metrics.ServerMetric{}
+	metric := &metrics.ServerMetric{
+		RebootRequired: false,
+	}
 
 	cp, err := smc.cpu()
 	if err == nil {
@@ -112,12 +116,35 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 		c, err := smc.dockerContainers()
 		if err != nil {
 			log.Trace().Err(err)
-		}
-
-		if err == nil {
+		} else {
 			metric.Containers = c
 		}
 	}
+
+	osInfo, err := smc.os()
+	if err == nil {
+		metric.OS = osInfo
+	} else {
+		log.Trace().Err(err)
+	}
+
+	phpVersion, err := smc.phpVersion()
+	if err == nil {
+		metric.PHPVersion = phpVersion
+	} else {
+		log.Trace().Err(err)
+	}
+
+	uptime, err := host.BootTime()
+	if err == nil {
+		metric.BootTime = uptime
+	}
+
+	if _, err := os.Stat("/var/run/reboot-required"); err == nil {
+		metric.RebootRequired = true
+	}
+
+	err = nil
 
 	metric.CreatedAt = time.Now()
 
@@ -171,6 +198,41 @@ func (smc *ServerMetricCollector) load() (*metrics.ServerLoad, error) {
 		Load5:  avg.Load5,
 		Load15: avg.Load15,
 	}, nil
+}
+
+func (smc *ServerMetricCollector) os() (*metrics.OS, error) {
+	platform, _, version, err := host.PlatformInformation()
+	if err != nil {
+		return nil, err
+	}
+
+	osInfo := &metrics.OS{
+		Name:    platform,
+		Version: version,
+	}
+
+	return osInfo, nil
+}
+
+func (smc *ServerMetricCollector) phpVersion() (string, error) {
+	phpPath, err := exec.LookPath("php")
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command(phpPath, "-v")
+	output, err := cmd.CombinedOutput()
+
+	r, err := regexp.Compile(`^PHP\s([^\s]*)`)
+	if err != nil {
+		return "", err
+	}
+	matched := r.FindStringSubmatch(string(output))
+	if len(matched) == 0 {
+		return "", nil
+	}
+
+	return matched[1], nil
 }
 
 func (smc *ServerMetricCollector) dockerContainers() (containers []metrics.Container, err error) {

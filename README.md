@@ -12,11 +12,11 @@ These metrics are then sent to [larashed.com](https://larashed.com/).
 - CPU usage
 - Memory usage
 - Disk space usage
+- Operating system name and version
+- Boot time
+- Whether a reboot is required
 - Docker container metrics
-
-## IPC Communication
-
-There are 2 supported communication types: TCP and Unix domain socket.
+- PHP version
 
 ## Platform support
 
@@ -25,7 +25,12 @@ We currently support macOS and major Linux (amd64) distributions. Thanks to the 
 
 ## How to run
 
-### Install as a systemd service
+### Communication and configuration
+
+Agent collects metrics through TCP or a Unix domain socket. Your application's configuration should match the
+ transport method.
+
+### Install as a systemd service (recommended)
 ```
 curl -sSL 'https://install.larashed.com/linux' | sudo LARASHED_APP_ID='xxxx' LARASHED_APP_KEY='zzzz' LARASHED_APP_ENV='production' sh
 ```
