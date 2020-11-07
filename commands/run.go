@@ -62,6 +62,7 @@ func (d *RunCommand) Run() error {
 	serverMetricCollector := collectors.NewServerMetricCollector(
 		serverMetricBucket,
 		cfg.ServerMetricCollectionInterval,
+		d.config.Hostname,
 		d.config.InDocker,
 	)
 

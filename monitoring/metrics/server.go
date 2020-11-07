@@ -35,6 +35,7 @@ type OS struct {
 
 // ServerMetric represents a server metric
 type ServerMetric struct {
+	Hostname             string      `json:"hostname"`
 	CPUUsedPercentage    float64     `json:"cpu_used_percentage"`
 	CPUCoreCount         int         `json:"cpu_core_count"`
 	Load                 ServerLoad  `json:"load"`

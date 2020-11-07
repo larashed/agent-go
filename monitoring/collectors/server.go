@@ -25,6 +25,7 @@ type ServerMetricCollector struct {
 	inDocker          bool
 	bucket            *buckets.ServerMetricBucket
 	intervalInSeconds int
+	hostname          string
 	stop              chan int
 }
 
@@ -32,11 +33,13 @@ type ServerMetricCollector struct {
 func NewServerMetricCollector(
 	bucket *buckets.ServerMetricBucket,
 	intervalInSeconds int,
+	hostname string,
 	inDocker bool) *ServerMetricCollector {
 	return &ServerMetricCollector{
 		inDocker,
 		bucket,
 		intervalInSeconds,
+		hostname,
 		make(chan int, 0),
 	}
 }
@@ -78,6 +81,7 @@ func (smc *ServerMetricCollector) Stop() {
 func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, error) {
 	metric := &metrics.ServerMetric{
 		RebootRequired: false,
+		Hostname:       smc.hostname,
 	}
 
 	cp, err := smc.cpu()

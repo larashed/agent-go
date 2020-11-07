@@ -64,7 +64,6 @@ func (c *Client) doRequest(method, url string, data string) (*Response, error) {
 
 	req.Header.Set("User-Agent", "Larashed/GoAgent "+config.GitTag)
 	req.Header.Set("Larashed-Environment", c.config.AppEnvironment)
-	req.Header.Set("Larashed-Hostname", c.config.Hostname)
 	req.Header.Set("Larashed-In-Docker", strconv.FormatBool(c.config.InDocker))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
