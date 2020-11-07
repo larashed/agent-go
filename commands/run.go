@@ -52,6 +52,7 @@ func NewRunCommand(cfg *config.Config, apiClient api.Api, socketServer *socketse
 func (d *RunCommand) Run() error {
 	log.Info().Msgf("Starting agent v%s", config.GitTag)
 	log.Trace().Msgf("Config: %s", d.config.String())
+	log.Info().Msgf("Agent running with PID %d", os.Getpid())
 
 	cfg := monitoring.NewConfig(200, 10, 10)
 
@@ -73,11 +74,13 @@ func (d *RunCommand) Run() error {
 		log.Info().Msg("[Disabled] Server resource collection")
 	}
 
-	go d.runSocketServer(appMetricBucket)
-	go d.runAppMetricSender(metricSender)
-
-	log.Info().Msgf("Agent running with PID %d", os.Getpid())
-	log.Info().Msgf("Socket address: %s://%s", d.config.SocketType, d.config.SocketAddress)
+	if d.config.CollectAppMetrics {
+		go d.runSocketServer(appMetricBucket)
+		go d.runAppMetricSender(metricSender)
+		log.Info().Msgf("Socket address: %s://%s", d.config.SocketType, d.config.SocketAddress)
+	} else {
+		log.Info().Msg("[Disabled] Application metric collection")
+	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
@@ -100,8 +103,10 @@ func (d *RunCommand) Shutdown() {
 		d.stopCollectorServer <- struct{}{}
 	}
 
-	d.stopSenderApp <- struct{}{}
-	d.stopSocketServer <- struct{}{}
+	if d.config.CollectAppMetrics {
+		d.stopSenderApp <- struct{}{}
+		d.stopSocketServer <- struct{}{}
+	}
 
 	time.Sleep(100 * time.Millisecond)
 

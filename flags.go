@@ -18,7 +18,8 @@ const (
 	JSONFlagName             = "json"
 	LoggingLevelFlagName     = "log-level"
 
-	CollectServerResourcesFlagName = "collect-server-resources"
+	CollectServerResourcesFlagName    = "collect-server-resources"
+	CollectApplicationMetricsFlagName = "collect-application-metrics"
 )
 
 var (
@@ -79,6 +80,11 @@ var (
 	CollectServerResourcesFlag = &cli.BoolFlag{
 		Name:  CollectServerResourcesFlagName,
 		Usage: "Collect server resource metrics",
+		Value: true,
+	}
+	CollectApplicationMetricsFlag = &cli.BoolFlag{
+		Name:  CollectApplicationMetricsFlagName,
+		Usage: "Collect application metrics",
 		Value: true,
 	}
 )

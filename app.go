@@ -62,6 +62,7 @@ func NewApp() *App {
 					HostnameFlag,
 					LoggingLevelFlag,
 					CollectServerResourcesFlag,
+					CollectApplicationMetricsFlag,
 				},
 			},
 			{
@@ -107,6 +108,7 @@ func newConfig(c *cli.Context) *config.Config {
 		SocketType:    c.String(SocketTypeFlagName),
 
 		CollectServerResources: c.Bool(CollectServerResourcesFlagName),
+		CollectAppMetrics:      c.Bool(CollectApplicationMetricsFlagName),
 	}
 
 	if len(cfg.SocketAddress) == 0 {

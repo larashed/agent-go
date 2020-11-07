@@ -19,6 +19,7 @@ type Config struct {
 	PathSysfs      string
 
 	CollectServerResources bool
+	CollectAppMetrics      bool
 }
 
 func (c *Config) String() string {
