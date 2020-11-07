@@ -41,25 +41,35 @@ The following environment variables will be read if present:
 - `LARASHED_APP_ENV`
 - `LARASHED_SOCKET_TYPE`
 - `LARASHED_SOCKET_ADDRESS`
+- `LARASHED_ADDITIONAL_ARGUMENTS`
 
 Agent configuration will be stored in `/etc/larashed/larashed.conf`.
 
 #### Post installation
 
-Download the script:
+One-liner agent update command:
+```
+sudo sh -ca 'curl https://install.larashed.com/linux | sh -as -- --update'
+```
 
+One-liner agent uninstall command:
+```
+sudo sh -ca 'curl https://install.larashed.com/linux | sh -as -- --uninstall'
+```
+
+---
+
+To download the script run:
 ```
 curl -sSL 'https://install.larashed.com/linux' -o /tmp/larashed-installer.sh && chmod +x /tmp/larashed-installer.sh
 ```
 
-#### Update agent to the latest version
-
+Update agent:
 ```
 sudo /tmp/larashed-installer.sh --update
 ```
 
-#### Completely uninstall the agent
-
+Uninstall agent:
 ```
 sudo /tmp/larashed-installer.sh --uninstall
 ```
