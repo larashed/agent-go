@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -115,11 +116,13 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 		s, err := smc.services()
 		if err == nil {
 			metric.Services = s
+		} else {
+			log.Trace().Err(err).Msg("Failed to fetch services")
 		}
 
 		c, err := smc.dockerContainers()
 		if err != nil {
-			log.Trace().Err(err)
+			log.Trace().Err(err).Msg("Failed to fetch containers")
 		} else {
 			metric.Containers = c
 		}
@@ -136,7 +139,7 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 	if err == nil {
 		metric.PHPVersion = phpVersion
 	} else {
-		log.Trace().Err(err)
+		log.Trace().Err(err).Msg("Failed to fetch PHP version")
 	}
 
 	uptime, err := host.BootTime()
@@ -240,15 +243,10 @@ func (smc *ServerMetricCollector) phpVersion() (string, error) {
 }
 
 func (smc *ServerMetricCollector) dockerContainers() (containers []metrics.Container, err error) {
-	dockerPath, err := exec.LookPath("docker")
-	if err != nil {
-		return containers, err
-	}
-
-	cmd := exec.Command(dockerPath, "stats", "--no-stream", "--format", "{{ json . }}")
+	cmd := exec.Command("docker", "stats", "--no-stream", "--format", "{{ json . }}")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return containers, err
+		return containers, errors.Wrap(err, "docker stats command failed")
 	}
 
 	list := strings.Split(
