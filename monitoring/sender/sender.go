@@ -9,7 +9,6 @@ import (
 	"github.com/larashed/agent-go/api"
 	"github.com/larashed/agent-go/monitoring"
 	"github.com/larashed/agent-go/monitoring/buckets"
-	"github.com/larashed/agent-go/monitoring/metrics"
 )
 
 // Sender defines a metric sender
@@ -62,8 +61,17 @@ func (s *Sender) SendServerMetrics() {
 	go func() {
 		for {
 			select {
-			case <-s.serverMetricBucket.Channel:
-				go s.aggregateAndSendServerMetrics()
+			case metric := <-s.serverMetricBucket.Channel:
+				log.Trace().
+					Str("metric", "server").
+					Msgf("Server metrics: %s", metric.String())
+
+				_, err := s.api.SendServerMetrics(metric.String())
+				if err != nil {
+					log.Warn().Msg("Failed to send server metrics: " + err.Error())
+
+					continue
+				}
 			case <-s.stopServerMetricSend:
 				return
 			}
@@ -80,7 +88,7 @@ func (s *Sender) SendAppMetrics() {
 				if count := s.appMetricBucket.Count(); count >= s.config.AppBucketLimit {
 					log.Debug().Str("metric", "app").
 						Int("metrics", count).
-						Msg("sending from channel read")
+						Msg("sending all metrics")
 
 					go s.sendAppMetrics()
 				}
@@ -105,7 +113,7 @@ func (s *Sender) SendAppMetrics() {
 					if count := s.appMetricBucket.Count(); count > 0 {
 						log.Debug().Str("metric", "app").
 							Int("count", count).
-							Msg("sending from ticker read")
+							Msg("sending pending metrics")
 
 						go s.sendAppMetrics()
 					}
@@ -121,48 +129,6 @@ func (s *Sender) updateSentAt() {
 
 	log.Debug().Msg("Updating sentAt")
 	s.sentAt = time.Now()
-}
-
-func (s *Sender) aggregateAndSendServerMetrics() {
-	minutes := s.serverMetricBucket.Minutes()
-
-	// don't send if the bucket contains only one (the current) minute
-	if len(minutes) <= 1 {
-		return
-	}
-
-	for _, minute := range minutes {
-		ms := s.serverMetricBucket.Metrics(minute)
-
-		metric := metrics.AggregateServerMetrics(ms)
-
-		log.Debug().
-			Str("metric", "server").
-			Int("minute", minute).
-			Msg("sending server metrics")
-
-		log.Trace().
-			Str("metric", "server").
-			Msgf("metrics: %s", metric.String())
-
-		_, err := s.api.SendServerMetrics(metric.String())
-		if err != nil {
-			s.serverMetricBucket.Remove(minute)
-
-			log.Warn().Msg("Failed to send server metrics: " + err.Error())
-			break
-		}
-
-		log.Debug().
-			Str("metric", "server").
-			Int("minute", minute).
-			Msg("removing minute from bucket")
-
-		// stop sending if the bucket contains only one (the current) minute
-		if len(s.serverMetricBucket.Minutes()) <= 1 {
-			break
-		}
-	}
 }
 
 func (s *Sender) sendAppMetrics() {

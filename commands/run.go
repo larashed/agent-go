@@ -54,7 +54,7 @@ func (d *RunCommand) Run() error {
 	log.Trace().Msgf("Config: %s", d.config.String())
 	log.Info().Msgf("Agent running with PID %d", os.Getpid())
 
-	cfg := monitoring.NewConfig(200, 10, 10)
+	cfg := monitoring.NewConfig(200, 10, 30)
 
 	appMetricBucket := buckets.NewAppMetricBucket()
 	serverMetricBucket := buckets.NewServerMetricBucket()

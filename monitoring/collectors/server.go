@@ -21,18 +21,18 @@ import (
 
 // ServerMetricCollector defines a server resource collector
 type ServerMetricCollector struct {
-	inDocker          bool
-	dockerClient      *DockerClient
-	bucket            *buckets.ServerMetricBucket
-	intervalInSeconds int
-	hostname          string
-	stop              chan int
+	inDocker             bool
+	dockerClient         *DockerClient
+	bucket               *buckets.ServerMetricBucket
+	serverMetricInterval int
+	hostname             string
+	stop                 chan int
 }
 
 // NewServerMetricCollector creates a new instance of `ServerMetricCollector`
 func NewServerMetricCollector(
 	bucket *buckets.ServerMetricBucket,
-	intervalInSeconds int,
+	serverMetricInterval int,
 	hostname string,
 	inDocker bool) *ServerMetricCollector {
 	dockerClient, err := NewDockerClient()
@@ -44,7 +44,7 @@ func NewServerMetricCollector(
 		inDocker,
 		dockerClient,
 		bucket,
-		intervalInSeconds,
+		serverMetricInterval,
 		hostname,
 		make(chan int, 0),
 	}
@@ -52,11 +52,11 @@ func NewServerMetricCollector(
 
 // Start server metric collection
 func (smc *ServerMetricCollector) Start() {
-	ticker := time.NewTicker(time.Duration(smc.intervalInSeconds) * time.Second)
+	ticker := time.NewTicker(time.Duration(smc.serverMetricInterval) * time.Second)
 	defer ticker.Stop()
 
 	// lets measure at start
-	metric, err := smc.buildServerMetrics()
+	metric, err := smc.fetchServerMetrics()
 	if err != nil {
 		log.Error().Msgf("Failed to collect server metrics: %v", err)
 	} else {
@@ -68,7 +68,7 @@ func (smc *ServerMetricCollector) Start() {
 		case <-smc.stop:
 			return
 		case <-ticker.C:
-			metric, err := smc.buildServerMetrics()
+			metric, err := smc.fetchServerMetrics()
 			if err != nil {
 				log.Error().Msgf("Failed to collect server metrics: %v", err)
 
@@ -84,7 +84,7 @@ func (smc *ServerMetricCollector) Stop() {
 	smc.stop <- 1
 }
 
-func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, error) {
+func (smc *ServerMetricCollector) fetchServerMetrics() (*metrics.ServerMetric, error) {
 	metric := &metrics.ServerMetric{
 		RebootRequired: false,
 		Hostname:       smc.hostname,

@@ -1,4 +1,5 @@
 // copied from https://github.com/docker/cli/blob/master/cli/command/container/stats.go
+// created method to expose the `docker stats --no-stream` command output without actually outputting
 
 package container
 
