@@ -1,14 +1,12 @@
 package collectors
 
 import (
-	"encoding/json"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -24,6 +22,7 @@ import (
 // ServerMetricCollector defines a server resource collector
 type ServerMetricCollector struct {
 	inDocker          bool
+	dockerClient      *DockerClient
 	bucket            *buckets.ServerMetricBucket
 	intervalInSeconds int
 	hostname          string
@@ -36,8 +35,14 @@ func NewServerMetricCollector(
 	intervalInSeconds int,
 	hostname string,
 	inDocker bool) *ServerMetricCollector {
+	dockerClient, err := NewDockerClient()
+	if err != nil {
+		log.Trace().Err(err)
+	}
+
 	return &ServerMetricCollector{
 		inDocker,
+		dockerClient,
 		bucket,
 		intervalInSeconds,
 		hostname,
@@ -120,11 +125,13 @@ func (smc *ServerMetricCollector) buildServerMetrics() (*metrics.ServerMetric, e
 			log.Trace().Err(err).Msg("Failed to fetch services")
 		}
 
-		c, err := smc.dockerContainers()
-		if err != nil {
-			log.Trace().Err(err).Msg("Failed to fetch containers")
-		} else {
-			metric.Containers = c
+		if smc.dockerClient != nil {
+			c, err := smc.dockerClient.FetchContainers()
+			if err != nil {
+				log.Trace().Err(err).Msg("Failed to fetch containers")
+			} else {
+				metric.Containers = c
+			}
 		}
 	}
 
@@ -240,29 +247,6 @@ func (smc *ServerMetricCollector) phpVersion() (string, error) {
 	}
 
 	return matched[1], nil
-}
-
-func (smc *ServerMetricCollector) dockerContainers() (containers []metrics.Container, err error) {
-	cmd := exec.Command("docker", "stats", "--no-stream", "--format", "{{ json . }}")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return containers, errors.Wrap(err, "docker stats command failed")
-	}
-
-	list := strings.Split(
-		strings.TrimSpace(string(output)),
-		"\n",
-	)
-	for i := 0; i < len(list); i++ {
-		dto := &metrics.DockerStatsDto{}
-
-		err := json.Unmarshal([]byte(list[i]), dto)
-		if err == nil {
-			containers = append(containers, *dto.ToContainer())
-		}
-	}
-
-	return containers, nil
 }
 
 func (smc *ServerMetricCollector) services() (services []metrics.Service, err error) {

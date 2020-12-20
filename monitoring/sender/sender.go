@@ -147,6 +147,8 @@ func (s *Sender) aggregateAndSendServerMetrics() {
 
 		_, err := s.api.SendServerMetrics(metric.String())
 		if err != nil {
+			s.serverMetricBucket.Remove(minute)
+
 			log.Warn().Msg("Failed to send server metrics: " + err.Error())
 			break
 		}
@@ -155,8 +157,6 @@ func (s *Sender) aggregateAndSendServerMetrics() {
 			Str("metric", "server").
 			Int("minute", minute).
 			Msg("removing minute from bucket")
-
-		s.serverMetricBucket.Remove(minute)
 
 		// stop sending if the bucket contains only one (the current) minute
 		if len(s.serverMetricBucket.Minutes()) <= 1 {
