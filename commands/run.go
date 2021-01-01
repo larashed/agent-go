@@ -6,6 +6,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/go-units"
 	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/errors"
@@ -54,19 +55,26 @@ func (d *RunCommand) Run() error {
 	log.Trace().Msgf("Config: %s", d.config.String())
 	log.Info().Msgf("Agent running with PID %d", os.Getpid())
 
-	cfg := monitoring.NewConfig(200, 10, 30)
+	cfg := &monitoring.Config{
+		AppMetricSendCount:              200,
+		AppMetricSendInterval:           10 * time.Second,
+		AppMetricOverflowLimit:          30000,
+		AppMetricOverflowLimitBytes:     50 * units.MiB,
+		ServerMetricSendInterval:        30 * time.Second,
+		AppMetricSleepDurationOnFailure: 4 * time.Second,
+	}
 
 	appMetricBucket := buckets.NewAppMetricBucket()
 	serverMetricBucket := buckets.NewServerMetricBucket()
 
 	serverMetricCollector := collectors.NewServerMetricCollector(
 		serverMetricBucket,
-		cfg.ServerMetricCollectionInterval,
+		cfg.ServerMetricSendInterval,
 		d.config.Hostname,
 		d.config.InDocker,
 	)
 
-	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, cfg)
+	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, cfg, true)
 
 	if d.config.CollectServerResources {
 		go d.runServerMetricCollector(serverMetricCollector)
@@ -164,7 +172,7 @@ func (d *RunCommand) runServerMetricSender(sender *sender.Sender) {
 	}()
 
 	log.Info().Msg("Starting server metric sender")
-	sender.SendServerMetrics()
+	sender.StartServerMetricSend()
 }
 
 func (d *RunCommand) runAppMetricSender(sender *sender.Sender) {
@@ -176,5 +184,5 @@ func (d *RunCommand) runAppMetricSender(sender *sender.Sender) {
 	}()
 
 	log.Info().Msg("Starting app metric sender")
-	sender.SendAppMetrics()
+	sender.StartAppMetricSend()
 }

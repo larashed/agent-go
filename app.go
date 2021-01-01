@@ -43,6 +43,7 @@ func NewApp() *App {
 
 					log.Bootstrap(log.ParseLoggingLevel(cfg.LogLevel))
 
+					//apiClient := api.NewMockAPICClient(true)
 					apiClient := api.NewClient(cfg)
 
 					server := socketserver.NewServer(cfg.SocketType, cfg.SocketAddress)

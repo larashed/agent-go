@@ -24,7 +24,7 @@ type ServerMetricCollector struct {
 	inDocker             bool
 	dockerClient         *DockerClient
 	bucket               *buckets.ServerMetricBucket
-	serverMetricInterval int
+	serverMetricInterval time.Duration
 	hostname             string
 	stop                 chan int
 }
@@ -32,7 +32,7 @@ type ServerMetricCollector struct {
 // NewServerMetricCollector creates a new instance of `ServerMetricCollector`
 func NewServerMetricCollector(
 	bucket *buckets.ServerMetricBucket,
-	serverMetricInterval int,
+	serverMetricInterval time.Duration,
 	hostname string,
 	inDocker bool) *ServerMetricCollector {
 	dockerClient, err := NewDockerClient()
@@ -52,7 +52,7 @@ func NewServerMetricCollector(
 
 // Start server metric collection
 func (smc *ServerMetricCollector) Start() {
-	ticker := time.NewTicker(time.Duration(smc.serverMetricInterval) * time.Second)
+	ticker := time.NewTicker(smc.serverMetricInterval)
 	defer ticker.Stop()
 
 	// lets measure at start

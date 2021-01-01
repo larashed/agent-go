@@ -67,6 +67,22 @@ func (b *AppMetricBucket) Count() int {
 	return len(b.metrics)
 }
 
+// Discard metrics from the bucket
+func (b *AppMetricBucket) Discard(limit int) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	total := len(b.metrics)
+	if limit > total {
+		limit = total
+	}
+
+	newBucketItems := make([]metrics.AppMetric, 0)
+	newBucketItems = append(newBucketItems, b.metrics[limit:]...)
+
+	b.metrics = newBucketItems
+}
+
 // Extract a limited amount of records from the bucket
 func (b *AppMetricBucket) Extract(limit int) *AppMetricBucket {
 	b.mutex.Lock()
@@ -80,7 +96,7 @@ func (b *AppMetricBucket) Extract(limit int) *AppMetricBucket {
 	newBucketItems := make([]metrics.AppMetric, 0)
 	newBucketItems = append(newBucketItems, b.metrics[:limit]...)
 
-	b.metrics = append(make([]metrics.AppMetric, 0), b.metrics[count:]...)
+	b.metrics = append(make([]metrics.AppMetric, 0), b.metrics[limit:]...)
 
 	return NewBucketFromItems(newBucketItems)
 }

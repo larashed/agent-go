@@ -8,7 +8,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.13 // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/cloudflare/cfssl v1.5.0 // indirect
+	github.com/cloudflare/cfssl v1.5.0
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/containerd/continuity v0.0.0-20201208142359-180525291bb7 // indirect
 	github.com/davecgh/go-spew v1.1.1

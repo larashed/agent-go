@@ -65,7 +65,8 @@ func (s *Server) Start(handler DataHandler) (err error) {
 			}
 		}
 
-		log.Debug().Msg("Received a new connection")
+		log.Trace().Msg("Received a new connection")
+
 		go s.handleData(conn, handler)
 	}
 }
@@ -88,6 +89,7 @@ func (s *Server) handleData(c net.Conn, handler DataHandler) {
 	}
 
 	line := string(bts)
+
 	log.Trace().Msgf("Received message:\n'%s' with length %d", line, len(line))
 
 	handler(strings.TrimSpace(line))
