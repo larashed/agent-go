@@ -50,7 +50,7 @@ SCRIPT_MODE="install"                                               # [install|u
 PERFORM_UPDATE=0                                                    # overridden with --update
 VERBOSE="false"                                                     # overridden with -v
 # variables for internal usage
-CHOOSEN_DOWNLOADER=""                                               # Will be either curl or wget
+CHOSEN_DOWNLOADER=""                                                # Will be either curl or wget
 LATEST_LINUX_BINARY_URL=""                                          # Auto populated from GitHub API
 LATEST_LINUX_BINARY_HASH_URL=""                                     # Auto populated from GitHub API
 LATEST_LINUX_BINARY_VERSION=""                                      # Auto populated from GitHub API
@@ -142,9 +142,9 @@ check_root() {
 # choose downloader
 check_download_tool() {
     if command -v wget > /dev/null 2>&1; then
-        CHOOSEN_DOWNLOADER="wget"
+        CHOSEN_DOWNLOADER="wget"
     elif command -v curl > /dev/null 2>&1; then
-        CHOOSEN_DOWNLOADER="curl"
+        CHOSEN_DOWNLOADER="curl"
     else
         print_error "Neither curl or wget are present! Please install one of them to continue."
         return 1
@@ -171,20 +171,20 @@ download_url() {
 
     # make prints
     if $VERBOSE; then
-        print_yellow "Downloading using $CHOOSEN_DOWNLOADER from: $SOURCE_URL"
+        print_yellow "Downloading using $CHOSEN_DOWNLOADER from: $SOURCE_URL"
         print_yellow "to: $DEST_PATH"
     elif !($HIDE_PROGRESS); then
         print_white "Downloading $SOURCE_URL"
     fi
 
     # download using either curl or wget
-    if [ "$CHOOSEN_DOWNLOADER" = "curl" ] && !($HIDE_PROGRESS); then
+    if [ "$CHOSEN_DOWNLOADER" = "curl" ] && !($HIDE_PROGRESS); then
         curl -SL -o "$DEST_PATH" "$SOURCE_URL"
-    elif [ "$CHOOSEN_DOWNLOADER" = "curl" ] && $HIDE_PROGRESS; then
+    elif [ "$CHOSEN_DOWNLOADER" = "curl" ] && $HIDE_PROGRESS; then
         curl -SLs -o "$DEST_PATH" "$SOURCE_URL"
-    elif [ "$CHOOSEN_DOWNLOADER" = "wget" ] && !($HIDE_PROGRESS); then
+    elif [ "$CHOSEN_DOWNLOADER" = "wget" ] && !($HIDE_PROGRESS); then
         wget --show-progress --progress=bar:nocscroll -q -O "$DEST_PATH" "$SOURCE_URL"
-    elif [ "$CHOOSEN_DOWNLOADER" = "wget" ] && $HIDE_PROGRESS; then
+    elif [ "$CHOSEN_DOWNLOADER" = "wget" ] && $HIDE_PROGRESS; then
         wget -q -O "$DEST_PATH" "$SOURCE_URL"
     else
         print_error "Internal script error."
@@ -286,7 +286,7 @@ generate_config() {
     if [ -z "$LARASHED_APP_KEY" ]; then LARASHED_APP_KEY="xxxxx"; fi
     if [ -z "$LARASHED_APP_ENV" ]; then LARASHED_APP_ENV="production"; fi
     if [ -z "$LARASHED_SOCKET_TYPE" ]; then LARASHED_SOCKET_TYPE="tcp"; fi
-    if [ -z "$LARASHED_SOCKET_ADDRESS" ]; then LARASHED_SOCKET_ADDRESS="0.0.0.0:33101"; fi
+    if [ -z "$LARASHED_SOCKET_ADDRESS" ]; then LARASHED_SOCKET_ADDRESS="127.0.0.1:33101"; fi
     if [ -z "$LARASHED_ADDITIONAL_ARGUMENTS" ]; then LARASHED_ADDITIONAL_ARGUMENTS=""; fi
 
     # generate config
@@ -394,7 +394,7 @@ install_agent() {
         return 1
     elif [ -f "$BINARY_DESTINATION" ] && [ "$PERFORM_UPDATE" -eq 1 ]; then
         systemctl stop --no-pager --plain "$APP_NAME_SLUG.service" > /dev/null 2>&1 || { print_error "Error stopping $APP_NAME_SLUG.service" ; return 1; }
-        print_green "Sucessfully stopped $APP_NAME_SLUG.service for update"
+        print_green "Successfully stopped $APP_NAME_SLUG.service for update"
     fi
 
     # copy binary to destination and set permissions
