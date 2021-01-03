@@ -74,7 +74,7 @@ func (d *RunCommand) Run() error {
 		d.config.InDocker,
 	)
 
-	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, cfg, true)
+	metricSender := sender.NewSender(d.api, appMetricBucket, serverMetricBucket, cfg, false)
 
 	if d.config.CollectServerResources {
 		go d.runServerMetricCollector(serverMetricCollector)
