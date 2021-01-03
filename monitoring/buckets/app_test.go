@@ -60,6 +60,12 @@ func TestExtract(t *testing.T) {
 
 	assert.Equal(t, 0, firstBucket.Count())
 	assert.Equal(t, 0, secondBucket.Count())
+
+	firstBucket = newBucket(100)
+	secondBucket = firstBucket.Extract(110)
+
+	assert.Equal(t, 0, firstBucket.Count())
+	assert.Equal(t, 100, secondBucket.Count())
 }
 
 func newBucket(limit int) *AppMetricBucket {
