@@ -21,7 +21,7 @@ type DockerClient struct {
 
 // NewDockerClient creates a docker API client instance
 func NewDockerClient() (*DockerClient, error) {
-	apiClient, err := client.NewClientWithOpts(client.FromEnv)
+	apiClient, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create Docker API client")
 	}

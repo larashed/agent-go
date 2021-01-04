@@ -5,19 +5,14 @@ import (
 	"time"
 )
 
-// ServiceStatusStopped used to indicate a stopped service
-const ServiceStatusStopped = 0
-
-// ServiceStatusRunning used to indicate a running service
-const ServiceStatusRunning = 1
-
-// ServiceStatusUnknown used to indicate an unknown state service
-const ServiceStatusUnknown = 2
-
-// Service represents an OS service
+// Service represents a systemd service
 type Service struct {
-	Status int    `json:"status"`
-	Name   string `json:"name"`
+	Name        string `json:"name"`         // The primary unit name as string
+	Description string `json:"description"`  // The human readable description string
+	LoadState   string `json:"load_state"`   // The load state (i.e. whether the unit file has been loaded successfully)
+	ActiveState string `json:"active_state"` // The active state (i.e. whether the unit is currently started or not)
+	SubState    string `json:"sub_state"`    // The sub state (a more fine-grained version of the active state that is specific to the
+	// unit type, which the active state is not)
 }
 
 // ServerLoad represents server load metric

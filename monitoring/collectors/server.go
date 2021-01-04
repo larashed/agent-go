@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -118,7 +117,7 @@ func (smc *ServerMetricCollector) fetchServerMetrics() (*metrics.ServerMetric, e
 	}
 
 	if !smc.inDocker {
-		s, err := smc.services()
+		s, err := Services()
 		if err == nil {
 			metric.Services = s
 		} else {
@@ -247,48 +246,4 @@ func (smc *ServerMetricCollector) phpVersion() (string, error) {
 	}
 
 	return matched[1], nil
-}
-
-func (smc *ServerMetricCollector) services() (services []metrics.Service, err error) {
-	cmd := exec.Command("service", "--status-all")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, err
-	}
-
-	return parseServiceList(string(output)), nil
-}
-
-func parseServiceList(output string) (services []metrics.Service) {
-	list := strings.Split(output, "\n")
-	for i := 0; i < len(list); i++ {
-		r, err := regexp.Compile(`\[\s(.)\s\](.*)`)
-		if err != nil {
-			continue
-		}
-		matched := r.FindStringSubmatch(list[i])
-		if len(matched) == 0 {
-			continue
-		}
-		service := metrics.Service{}
-		parsedStatus := strings.TrimSpace(matched[1])
-		switch parsedStatus {
-		case "+":
-			service.Status = metrics.ServiceStatusRunning
-			break
-		case "-":
-			service.Status = metrics.ServiceStatusStopped
-			break
-		case "?":
-			service.Status = metrics.ServiceStatusUnknown
-			break
-		default:
-			continue
-		}
-
-		service.Name = strings.TrimSpace(matched[2])
-
-		services = append(services, service)
-	}
-	return services
 }

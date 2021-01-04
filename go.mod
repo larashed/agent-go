@@ -3,20 +3,21 @@ module github.com/larashed/agent-go
 go 1.15
 
 require (
-	code.cloudfoundry.org/bytefmt v0.0.0-20200131002437-cf55d5288a48
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/Microsoft/hcsshim v0.8.13 // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/cloudflare/cfssl v1.5.0
+	github.com/cloudflare/cfssl v1.5.0 // indirect
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/containerd/continuity v0.0.0-20201208142359-180525291bb7 // indirect
+	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/cli v20.10.0-beta1.0.20201029214301-1d20b15adc38+incompatible
 	github.com/docker/docker v20.10.1+incompatible
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.4.0
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/fvbommel/sortorder v1.0.2 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -28,8 +29,6 @@ require (
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
-	github.com/onsi/ginkgo v1.14.2 // indirect
-	github.com/onsi/gomega v1.10.3 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/pkg/errors v0.9.1
