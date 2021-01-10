@@ -20,6 +20,14 @@ type Port struct {
 	Type        string `json:"type"`
 }
 
+// DockerCompose defines docker-compose data
+type DockerCompose struct {
+	Project         string `json:"project"`
+	Version         string `json:"version"`
+	Directory       string `json:"directory"`
+	ContainerNumber string `json:"container_number"`
+}
+
 // Container defines container data
 type Container struct {
 	Name   string `json:"name"`
@@ -27,6 +35,8 @@ type Container struct {
 	Type   string `json:"type"`
 	Status string `json:"state"`
 	State  string `json:"status"`
+
+	DockerCompose DockerCompose `json:"docker_compose"`
 
 	Image         string `json:"image"`
 	SizeContainer int64  `json:"size_container"`

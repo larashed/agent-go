@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	docker "github.com/larashed/agent-go/docker"
-	"github.com/larashed/agent-go/monitoring/metrics"
+	metrics "github.com/larashed/agent-go/monitoring/metrics"
 )
 
 // DockerClient holds the docker API client
@@ -53,10 +53,14 @@ func (dc *DockerClient) FetchContainers() (collectedContainers []metrics.Contain
 		cont.CreatedAt = item.Created
 		cont.State = item.State
 		cont.Status = item.Status
-
 		cont.SizeContainer = item.SizeRootFs
 		cont.SizeAdded = item.SizeRw
-
+		cont.DockerCompose = metrics.DockerCompose{ //nolint:govet
+			Project:         item.Labels["com.docker.compose.project"],
+			Version:         item.Labels["com.docker.compose.version"],
+			Directory:       item.Labels["com.docker.compose.project.working_dir"],
+			ContainerNumber: item.Labels["com.docker.compose.container-number"],
+		}
 		cont.NetworkName = item.HostConfig.NetworkMode
 		if item.NetworkSettings.Networks[cont.NetworkName] != nil {
 			cont.IPAddress = item.NetworkSettings.Networks[cont.NetworkName].IPAddress
