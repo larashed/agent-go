@@ -51,6 +51,10 @@ func (dc *DockerClient) FetchContainers() (collectedContainers []metrics.Contain
 		cont.Command = item.Command
 		cont.Image = item.Image
 		cont.CreatedAt = item.Created
+		containerState, err := dc.client.ContainerInspect(context.Background(), item.ID)
+		if err == nil {
+			cont.StartedAt = containerState.State.StartedAt
+		}
 		cont.State = item.State
 		cont.Status = item.Status
 		cont.SizeContainer = item.SizeRootFs

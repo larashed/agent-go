@@ -36,6 +36,9 @@ type Container struct {
 	Status string `json:"state"`
 	State  string `json:"status"`
 
+	CreatedAt int64  `json:"created_at"`
+	StartedAt string `json:"started_at"`
+
 	DockerCompose DockerCompose `json:"docker_compose"`
 
 	Image         string `json:"image"`
@@ -45,8 +48,8 @@ type Container struct {
 	Ports   []Port   `json:"ports"`
 	Volumes []Volume `json:"volumes"`
 
-	Command           string  `json:"command"`
-	CreatedAt         int64   `json:"created_at"`
+	Command string `json:"command"`
+
 	CPUUsedPercentage float64 `json:"cpu_used_percentage"`
 
 	MemoryTotal          float64 `json:"memory_total"`
