@@ -47,7 +47,7 @@ SYSTEMD_RESTART_TIME="2"                                            # Time to wa
 SYSTEMD_TIMEOUT="10"                                                # Time to wait for agent to shutdown before force kill
 # script parameters
 SCRIPT_MODE="install"                                               # [install|uninstall] overridden with --uninstall
-PERFORM_UPDATE=0                                                    # overridden with --update
+PERFORM_UPDATE=1                                                    # overridden with --update
 VERBOSE="false"                                                     # overridden with -v
 # variables for internal usage
 CHOSEN_DOWNLOADER=""                                                # Will be either curl or wget
