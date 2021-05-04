@@ -404,7 +404,7 @@ install_agent() {
 
     # check if user exists, else create
     if !(getent passwd "$UNIX_USERNAME" > /dev/null 2>&1); then
-        /usr/sbin/useradd -M "$UNIX_USERNAME" || { print_error "Error creating agent user: $UNIX_USERNAME"; return 1; }
+        /usr/sbin/useradd -M "$UNIX_USERNAME" -u 1600 || { print_error "Error creating agent user: $UNIX_USERNAME"; return 1; }
         if $VERBOSE; then
             USER_UID=$(id -u $UNIX_USERNAME) || { print_error "Error getting user id of created user $UNIX_USERNAME"; return 1; }
             print_yellow "Created user $UNIX_USERNAME with UID $USER_UID."
