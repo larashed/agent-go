@@ -30,7 +30,7 @@ We currently support macOS and major Linux (amd64) distributions. Thanks to the 
 Agent collects metrics through TCP or a Unix domain socket. Your application's configuration should match the
  transport method.
 
-### Install as a systemd service (recommended)
+### Install a systemd service (recommended)
 ```
 curl -sSL 'https://install.larashed.com/linux' | sudo LARASHED_APP_ID='xxxx' LARASHED_APP_KEY='zzzz' LARASHED_APP_ENV='production' sh
 ```
@@ -41,11 +41,11 @@ The following environment variables will be read if present:
 - `LARASHED_APP_ENV`
 - `LARASHED_SOCKET_TYPE`
 - `LARASHED_SOCKET_ADDRESS`
-- `LARASHED_ADDITIONAL_ARGUMENTS`
+- `LARASHED_ARGS`
 
 Agent configuration will be stored in `/etc/larashed/larashed.conf`.
 
-#### Post installation
+### Update agent
 
 Download the script:
 
@@ -66,7 +66,9 @@ sudo /tmp/larashed-installer.sh --uninstall
 ```
 
 ### Manual run
+
 Download the latest binary from the [releases](https://github.com/larashed/agent-go/releases/latest) page and run:
+
 ```
 agent_linux_amd64 run \
     --app-id=xxxxx \
@@ -75,6 +77,25 @@ agent_linux_amd64 run \
     --socket-type=tcp \
     --socket-address=0.0.0.0:33101
 ```
+
+OPTIONS:
+```
+--socket-type value            Socket type (unix, tcp) (default: "unix")
+--socket-address value         Socket address
+--socket value                 Socket address (deprecated, use --socket-address instead)
+--api-url value                Larashed API URL (default: "https://api.larashed.com/")
+--env value, --app-env value   Application's environment name
+--app-id value                 Your application's ID
+--app-key value                Your application's secret key
+--path-proc value              Kernel & process file path (default: "/proc")
+--path-sys value               System component file path (default: "/sys")
+--hostname value               Hostname
+--log-level value              Logging level (info, debug, trace) (default: "debug")
+--collect-server-resources     Collect server resource metrics (default: true)
+--collect-application-metrics  Collect application metrics (default: true)
+--help, -h                     show help (default: false)
+```
+
 ### Docker
 
 You can run our agent as a Docker container.

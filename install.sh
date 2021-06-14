@@ -5,30 +5,6 @@
 #
 # Usage: `curl -sSL %%URL_TO_SCRIPT | ENVIRONMENT_VARIABLES... sudo sh`
 #
-# Steps after each script call:
-# 0. Check calling user is root and sudo is installed
-# 1. Parse arguments
-# Install-Workflow:
-# 1. Check if wget or curl are present
-# 2. Create tmp-dir
-# 3. Get release information from api.github.com
-#    for the project specified in $GITHUB_URL
-# 4. Download the binary named $LINUX_BINARY_NAME in the release
-# 5. Download the first file in the release, matching the pattern
-#    $LINUX_BINARY_NAME.XYZ where XYZ can be any hash-algorithm command like sha256sum or
-#    md5sum. The script will automatically try to run the
-#    hash-command found after the last dot in the filename!
-#    If the checksum file would be named e.g. binary.md5sum,
-#    the binary would be compared using the md5sum command.
-# 6. Compare binary checksum with downloaded checksum, exit on mismatch
-# 7. Copy binary to destination, set permissions
-# 8. Generate config files
-# 9. Generate entry in /etc/sudoers
-# 10. Generate systemd unit
-################################################################
-
-################################################################
-# declaration of global variables
 ################################################################
 
 APP_NAME="Larashed monitoring agent"                           # Used in prints
@@ -126,8 +102,7 @@ print_help() {
   print_white '$LARASHED_APP_ENV'
   print_white '$LARASHED_SOCKET_TYPE'
   print_white '$LARASHED_SOCKET_ADDRESS'
-  print_white '$LARASHED_ADDITIONAL_ARGUMENTS'
-
+  print_white '$LARASHED_ARGS'
 }
 
 ################################################################
@@ -306,7 +281,7 @@ generate_config() {
   if [ -z "$LARASHED_APP_ENV" ]; then LARASHED_APP_ENV="production"; fi
   if [ -z "$LARASHED_SOCKET_TYPE" ]; then LARASHED_SOCKET_TYPE="tcp"; fi
   if [ -z "$LARASHED_SOCKET_ADDRESS" ]; then LARASHED_SOCKET_ADDRESS="127.0.0.1:33101"; fi
-  if [ -z "$LARASHED_ADDITIONAL_ARGUMENTS" ]; then LARASHED_ADDITIONAL_ARGUMENTS=""; fi
+  if [ -z "$LARASHED_ARGS" ]; then LARASHED_ARGS=""; fi
 
   # generate config
   echo "APP_ID=$LARASHED_APP_ID" >"$DESTINATION_PATH" || {
@@ -317,7 +292,7 @@ generate_config() {
   echo "APP_ENV=$LARASHED_APP_ENV" >>"$DESTINATION_PATH"
   echo "SOCKET_TYPE=$LARASHED_SOCKET_TYPE" >>"$DESTINATION_PATH"
   echo "SOCKET_ADDRESS=$LARASHED_SOCKET_ADDRESS" >>"$DESTINATION_PATH"
-  echo "ADDITIONAL_ARGUMENTS=$LARASHED_ADDITIONAL_ARGUMENTS" >>"$DESTINATION_PATH"
+  echo "ADD_ARGS=$LARASHED_ARGS" >>"$DESTINATION_PATH"
 
   if $VERBOSE; then
     print_yellow "Successfully created config in $DESTINATION_PATH"
@@ -334,7 +309,7 @@ install_systemd_unit() {
   RUN_ARGS="$RUN_ARGS --app-env=\"\${APP_ENV}\""
   RUN_ARGS="$RUN_ARGS --socket-type=\"\${SOCKET_TYPE}\""
   RUN_ARGS="$RUN_ARGS --socket-address=\"\${SOCKET_ADDRESS}\""
-  RUN_ARGS="$RUN_ARGS \"\${ADDITIONAL_ARGUMENTS}\""
+  RUN_ARGS="$RUN_ARGS \"\$ADD_ARGS\""
 
   ## build systemd unit
   # build unit part
