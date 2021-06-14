@@ -41,7 +41,8 @@ LINUX_BINARY_NAME="agent_linux_amd64"                               # Name of th
 BINARY_DESTINATION="/usr/local/bin/larashed-agent"                  # FHS conform path for of executable
 CONFIG_FOLDER="/etc/larashed"                                       # FHS conform config path
 CONFIG_FILE="larashed.conf"                                         # config filename inside $CONFIG_FOLDER
-UNIX_USERNAME="larashed"                                            # Username for the agent-runuser
+UNIX_USERNAME="larashed"                                            # Agent username
+UNIX_USER_ID=1600                                                   # Agent user id
 SYSTEMD_UNIT_PATH="/etc/systemd/system/$APP_NAME_SLUG.service"      # Path to the systemd unit file
 SYSTEMD_RESTART_TIME="2"                                            # Time to wait after stop during systemd restart
 SYSTEMD_TIMEOUT="10"                                                # Time to wait for agent to shutdown before force kill
@@ -404,7 +405,8 @@ install_agent() {
 
     # check if user exists, else create
     if !(getent passwd "$UNIX_USERNAME" > /dev/null 2>&1); then
-        /usr/sbin/useradd -M "$UNIX_USERNAME" -u 1600 || { print_error "Error creating agent user: $UNIX_USERNAME"; return 1; }
+        # using -u for cases when provisioning agent user before other users
+        /usr/sbin/useradd -M "$UNIX_USERNAME" -u $UNIX_USER_ID || { print_error "Error creating agent user: $UNIX_USERNAME"; return 1; }
         if $VERBOSE; then
             USER_UID=$(id -u $UNIX_USERNAME) || { print_error "Error getting user id of created user $UNIX_USERNAME"; return 1; }
             print_yellow "Created user $UNIX_USERNAME with UID $USER_UID."
