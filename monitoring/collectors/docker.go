@@ -59,12 +59,7 @@ func (dc *DockerClient) FetchContainers() (collectedContainers []metrics.Contain
 		cont.Status = item.Status
 		cont.SizeContainer = item.SizeRootFs
 		cont.SizeAdded = item.SizeRw
-		cont.DockerCompose = metrics.DockerCompose{ //nolint:govet
-			Project:         item.Labels["com.docker.compose.project"],
-			Version:         item.Labels["com.docker.compose.version"],
-			Directory:       item.Labels["com.docker.compose.project.working_dir"],
-			ContainerNumber: item.Labels["com.docker.compose.container-number"],
-		}
+		cont.Labels = item.Labels
 		cont.NetworkName = item.HostConfig.NetworkMode
 		if item.NetworkSettings.Networks[cont.NetworkName] != nil {
 			cont.IPAddress = item.NetworkSettings.Networks[cont.NetworkName].IPAddress
