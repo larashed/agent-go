@@ -22,12 +22,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
    " -o \
    /go/bin/agent .
 
-FROM scratch
-
-ENV DOCKER_BUILD=1
-
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /go/bin/agent /go/bin/agent
+#ENV DOCKER_BUILD=1
+#
+#COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+#COPY --from=builder /go/bin/agent /go/bin/agent
 
 VOLUME /host/proc /host/sys
 
