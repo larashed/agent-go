@@ -28,6 +28,7 @@ ENV DOCKER_BUILD=1
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /go/bin/agent /go/bin/agent
+COPY nsswitch.conf /etc/nsswitch.conf
 
 VOLUME /host/proc /host/sys
 
